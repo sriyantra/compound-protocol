@@ -6,7 +6,7 @@ import "./SafeMath.sol";
 /**
   * @title Fuse's AlchemixInterestRateModel Contract
   * @author David Lucid <david@rari.capital> (https://github.com/davidlucid)
-  * @notice Modified version of JumpRateModel in which the base rate is tethered to the ALCX staking APR.
+  * @notice Modified version of JumpRateModel in which the kink point is tethered to the ALCX staking APR.
   */
 contract AlchemixInterestRateModel is JumpRateModel {
     using SafeMath for uint;
@@ -36,11 +36,13 @@ contract AlchemixInterestRateModel is JumpRateModel {
     }
 
     /**
-     * @notice Resets the baseRate and multiplier per block based on the stability fee and ALCX pool reward rate
+     * @notice Resets the baseRate and multiplier per block based on the stability fee and Dai savings rate
      */
     function poke() public {
-        // We ensure the minimum borrow rate >= ALCX pool reward rate
-        uint256 _baseRatePerBlock = prrPerBlock();
+        // Set baseRatePerBlock so kink point APR = ALCX staking APR
+        // baseRatePerBlock + (multiplierPerBlock * kink / 1e18) = ALCX staking APR
+        // baseRatePerBlock = ALCX staking APR - (multiplierPerBlock * kink / 1e18)
+        uint256 _baseRatePerBlock = prrPerBlock().sub(multiplierPerBlock.mul(kink).div(1e18));
 
         if (_baseRatePerBlock != baseRatePerBlock) {
             baseRatePerBlock = _baseRatePerBlock;
