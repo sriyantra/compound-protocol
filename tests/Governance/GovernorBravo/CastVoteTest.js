@@ -21,7 +21,7 @@ describe("governorBravo#castVote/2", () => {
 
   beforeAll(async () => {
     [root, a1, ...accounts] = saddle.accounts;
-    comp = await deploy('Comp', [root]);
+    comp = await deploy('CompImmutable', [root]);
     govDelegate = await deploy('GovernorBravoDelegateHarness');
     gov = await deploy('GovernorBravoDelegator', [address(0), comp._address, root, govDelegate._address, 17280, 1, "100000000000000000000000"]);
     mergeInterface(gov,govDelegate);
@@ -101,7 +101,7 @@ describe("governorBravo#castVote/2", () => {
 
     describe('castVoteBySig', () => {
       const Domain = (gov) => ({
-        name: 'Compound Governor Bravo',
+        name: 'Rari Governor Bravo',
         chainId: 1, // await web3.eth.net.getId(); See: https://github.com/trufflesuite/ganache-core/issues/515
         verifyingContract: gov._address
       });

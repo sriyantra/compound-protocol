@@ -1,15 +1,16 @@
 pragma solidity ^0.5.16;
 pragma experimental ABIEncoderV2;
 
-import "../../contracts/Governance/Comp.sol";
+import "./CompImmutable.sol";
 
-contract CompScenario is Comp {
-    constructor(address account) Comp(account) public {}
+contract CompScenario is CompImmutable {
+    constructor(address account) CompImmutable(account) public {}
 
     function transferScenario(address[] calldata destinations, uint256 amount) external returns (bool) {
         for (uint i = 0; i < destinations.length; i++) {
             address dst = destinations[i];
-            _transferTokens(msg.sender, dst, uint96(amount));
+            _transfer(msg.sender, dst, amount);
+            _moveDelegates(delegates[msg.sender], delegates[dst], safe96(amount, "CompScenario::transferScenario: amount exceeds 96 bits"));
         }
         return true;
     }
@@ -17,7 +18,8 @@ contract CompScenario is Comp {
     function transferFromScenario(address[] calldata froms, uint256 amount) external returns (bool) {
         for (uint i = 0; i < froms.length; i++) {
             address from = froms[i];
-            _transferTokens(from, msg.sender, uint96(amount));
+            _transfer(from, msg.sender, amount);
+            _moveDelegates(delegates[from], delegates[msg.sender], safe96(amount, "CompScenario::transferFromScenario: amount exceeds 96 bits"));
         }
         return true;
     }
