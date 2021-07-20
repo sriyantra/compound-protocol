@@ -1010,7 +1010,8 @@ library SafeERC20 {
  * This license is liable to change at any time at the sole discretion of David Lucid of Rari Capital, Inc.
  */
 
-pragma solidity 0.5.17;
+pragma solidity 0.5.17;
+
 /**
  * @title RariGovernanceToken
  * @author David Lucid <david@rari.capital> (https://github.com/davidlucid)
@@ -1042,10 +1043,9 @@ contract Comp is Initializable, ERC20, ERC20Detailed, ERC20Burnable, ERC20Pausab
     /**
      * @dev Upgrades RariGovernanceToken from `v1.3.0` to `v1.4.0`.
      */
-    function upgrade2(address distributorV2, address vestingV2) external onlyPauser {
+    function upgrade2() external onlyPauser {
         require(!upgraded2, "Already upgraded.");
-        _mint(distributorV2, 3000000 * (10 ** uint256(decimals())));
-        _mint(vestingV2, 7000000 * (10 ** uint256(decimals())));
+        _mint(msg.sender, 2600000 * (10 ** uint256(decimals())));
         upgraded2 = true;
     }
 
