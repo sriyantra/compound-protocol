@@ -77,7 +77,7 @@ contract GovernorBravoDelegateStorageV1 is GovernorBravoDelegatorStorage {
     /// @notice The total number of proposals
     uint public proposalCount;
 
-    /// @notice The address of the Compound Protocol Timelock
+    /// @notice The address of the Rari Protocol Timelock
     TimelockInterface public timelock;
 
     /// @notice The address of the Rari Governance Token (RGT)
