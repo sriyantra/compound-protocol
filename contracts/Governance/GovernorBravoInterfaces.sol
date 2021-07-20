@@ -80,8 +80,8 @@ contract GovernorBravoDelegateStorageV1 is GovernorBravoDelegatorStorage {
     /// @notice The address of the Compound Protocol Timelock
     TimelockInterface public timelock;
 
-    /// @notice The address of the Compound governance token
-    CompInterface public comp;
+    /// @notice The address of the Rari Governance Token (RGT)
+    RgtInterface public rgt;
 
     /// @notice The official record of all proposals ever proposed
     mapping (uint => Proposal) public proposals;
@@ -172,7 +172,7 @@ interface TimelockInterface {
     function executeTransaction(address target, uint value, string calldata signature, bytes calldata data, uint eta) external payable returns (bytes memory);
 }
 
-interface CompInterface {
+interface RgtInterface {
     function getPriorVotes(address account, uint blockNumber) external view returns (uint96);
 }
 
