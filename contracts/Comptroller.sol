@@ -13,7 +13,7 @@ import "./Unitroller.sol";
  * @title Compound's Comptroller Contract
  * @author Compound
  */
-contract Comptroller is ComptrollerV2Storage, ComptrollerInterface, ComptrollerErrorReporter, Exponential {
+contract Comptroller is ComptrollerV5Storage, ComptrollerInterface, ComptrollerErrorReporter, Exponential {
     /**
      * @notice Emitted when an admin supports a market
      */
@@ -63,6 +63,16 @@ contract Comptroller is ComptrollerV2Storage, ComptrollerInterface, ComptrollerE
      * @notice Emitted when pause guardian is changed
      */
     event NewPauseGuardian(address oldPauseGuardian, address newPauseGuardian);
+
+    /**
+     * @notice Emitted when supply cap guardian is changed
+     */
+    event NewSupplyCapGuardian(address oldSupplyCapGuardian, address newSupplyCapGuardian);
+
+    /**
+     * @notice Emitted when supply cap for a cToken is changed
+     */
+    event NewSupplyCap(CToken indexed cToken, uint newSupplyCap);
 
     /**
      * @notice Emitted when an action is paused globally
@@ -279,6 +289,22 @@ contract Comptroller is ComptrollerV2Storage, ComptrollerInterface, ComptrollerE
         }
 
         // *may include Policy Hook-type checks
+        uint supplyCap = supplyCaps[cToken];
+        // Supply cap of 0 corresponds to unlimited supplying
+        if (supplyCap != 0) {
+            uint totalCash = CToken(cToken).getCash();
+            uint totalBorrows = CToken(cToken).totalBorrows();
+            uint totalReserves = CToken(cToken).totalReserves();
+            // totalSupplies = totalCash + totalBorrows - totalReserves
+            (MathError mathErr, uint totalSupplies) = addThenSubUInt(totalCash, totalBorrows, totalReserves);
+            require(mathErr == MathError.NO_ERROR, "totalSupplies failed");
+
+            uint nextTotalSupplies;
+            (mathErr, nextTotalSupplies) = addUInt(totalSupplies, mintAmount);
+            require(mathErr == MathError.NO_ERROR, "new total supplies overflow");
+
+            require(nextTotalSupplies < supplyCap, "market supply cap reached");
+        }
 
         return uint(Error.NO_ERROR);
     }
@@ -1291,6 +1317,43 @@ contract Comptroller is ComptrollerV2Storage, ComptrollerInterface, ComptrollerE
         emit MarketUnlisted(cToken);
 
         return uint(Error.NO_ERROR);
+    }
+
+    /**
+     * @notice Admin function to change the Supply Cap Guardian
+     * @param newSupplyCapGuardian The address of the new Supply Cap Guardian
+     */
+    function _setSupplyCapGuardian(address newSupplyCapGuardian) external {
+        require(hasAdminRights(), "only admin can set supply cap guardian");
+
+        // Save current value for inclusion in log
+        address oldSupplyCapGuardian = supplyCapGuardian;
+
+        // Store supplyCapGuardian with value newSupplyCapGuardian
+        supplyCapGuardian = newSupplyCapGuardian;
+
+        // Emit NewSupplyCapGuardian(OldSupplyCapGuardian, NewSupplyCapGuardian)
+        emit NewSupplyCapGuardian(oldSupplyCapGuardian, newSupplyCapGuardian);
+    }
+
+    /**
+      * @notice Set the given supply caps for the given cToken markets. Supplying that brings total supply to or above supply cap will revert.
+      * @dev Admin or supplyCapGuardian function to set the supply caps. A supply cap of 0 corresponds to unlimited supplying.
+      * @param cTokens The addresses of the markets (tokens) to change the supply caps for
+      * @param newSupplyCaps The new supply cap values in underlying to be set. A value of 0 corresponds to unlimited supplying.
+      */
+    function _setMarketSupplyCaps(CToken[] calldata cTokens, uint[] calldata newSupplyCaps) external {
+        require(msg.sender == supplyCapGuardian || hasAdminRights(), "only admin or supply cap guardian can set supply caps");
+
+        uint numMarkets = cTokens.length;
+        uint numSupplyCaps = newSupplyCaps.length;
+
+        require(numMarkets != 0 && numMarkets == numSupplyCaps, "invalid input");
+
+        for(uint i = 0; i < numMarkets; i++) {
+            supplyCaps[address(cTokens[i])] = newSupplyCaps[i];
+            emit NewSupplyCap(cTokens[i], newSupplyCaps[i]);
+        }
     }
 
     /**
