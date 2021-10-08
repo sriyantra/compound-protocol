@@ -3,12 +3,20 @@ pragma solidity ^0.5.16;
 import "./CToken.sol";
 import "./ExponentialNoError.sol";
 import "./ComptrollerStorage.sol";
+import "./IveRGT.sol";
+import "./IFuseGaugeController.sol";
+import "./FuseSupplyGauge.sol";
+import "./FuseBorrowGauge.sol";
+import "./SafeMath.sol";
 
 /**
  * @title RewardsDistributor (COMP distribution logic extracted from `Comptroller`)
+ * Incorporates reward speed updates based on gauges votes 
  * @author Compound
  */
 contract RewardsDistributor is ExponentialNoError {
+    using SafeMath for uint256;
+
     /// @notice Administrator for this contract
     address public admin;
 
@@ -17,6 +25,9 @@ contract RewardsDistributor is ExponentialNoError {
 
     /// @dev The token to reward (i.e., COMP)
     address public rewardToken;
+
+    /// @dev Gauge controller interface 
+    IFuseGaugeController public gaugeController;
 
     struct CompMarketState {
         /// @notice The market's last updated compBorrowIndex or compSupplyIndex
@@ -31,6 +42,17 @@ contract RewardsDistributor is ExponentialNoError {
 
     /// @notice The rate at which the flywheel distributes COMP, per block
     uint public compRate;
+
+    /// @notice One week
+    uint256 private constant ONE_WEEK = 604800;
+
+    /// @notice Multiplier precision
+    uint256 private constant MULTIPLIER_PRECISION = 1e18;
+
+    /// @notice Gauge controller related
+    mapping(address => bool) public gauge_whitelist;
+
+    mapping(address => uint256) public last_time_gauge_updated;
 
     /// @notice The portion of compRate that each market currently receives
     mapping(address => uint) public compSupplySpeeds;
@@ -86,13 +108,17 @@ contract RewardsDistributor is ExponentialNoError {
     /// @notice Emitted when COMP is granted by admin
     event CompGranted(address recipient, uint amount);
 
+    /// @notice Emitted when gauge state is changed to active or inactive
+    event GaugeStateChanged(address gaugeAddress, bool isActive);
+
     /// @notice The initial COMP index for a market
     uint224 public constant compInitialIndex = 1e36;
 
     /// @dev Constructor to set admin to caller and set reward token
-    constructor(address _rewardToken) public {
+    constructor(address _rewardToken, address _gaugeController) public {
         admin = msg.sender;
         rewardToken = _rewardToken;
+        gaugeController = IFuseGaugeController(_gaugeController);
     }
 
     /*** Set Admin ***/
@@ -138,15 +164,45 @@ contract RewardsDistributor is ExponentialNoError {
         emit NewPendingAdmin(oldPendingAdmin, pendingAdmin);
     }
 
+    /*** Set Gauge Controller ***/
+
+    /**
+      * @notice Sets new gauge controller
+      * @dev Requires admin to call
+      */
+    function _setGaugeController(address _newGaugeController) external {
+        require(msg.sender == admin);
+        gaugeController = IFuseGaugeController(_newGaugeController);
+    }
+
+    /*** Set Gauge State ***/
+
+    /**
+      * @notice Sets new gauge state
+      * @dev Requires admin to call
+      */
+    function _setGaugeState(address _gaugeAddress, bool _isActive) external {
+        require(msg.sender == admin);
+        gauge_whitelist[_gaugeAddress] = _isActive;
+        emit GaugeStateChanged(_gaugeAddress, _isActive);
+    }
+
     /*** Comp Distribution ***/
 
     /**
-     * @notice Set COMP speed for a single market
-     * @param cToken The market whose COMP speed to update
+     * @notice Set COMP speed for a single market, manually
+     * @param gaugeAddress The gauge for the market whose COMP speed to update
      * @param compSpeed New COMP speed for market
      */
-    function setCompSupplySpeedInternal(CToken cToken, uint compSpeed) internal {
-        uint currentCompSpeed = compSupplySpeeds[address(cToken)];
+    function setCompSupplySpeedManual(address gaugeAddress, uint256 compSpeed) public {
+        require(msg.sender == admin, "only admin can set comp speed");
+        require(gauge_whitelist[gaugeAddress], "Gauge not whitelisted");
+
+        // Get cToken
+        CToken cToken = FuseSupplyGauge(gaugeAddress).cToken();
+        
+        uint256 currentCompSpeed = compSupplySpeeds[address(cToken)];
+        
         if (currentCompSpeed != 0) {
             // note that COMP speed could be set to 0 to halt liquidity rewards for a market
             updateCompSupplyIndex(address(cToken));
@@ -162,6 +218,7 @@ contract RewardsDistributor is ExponentialNoError {
                 });
             }
         }
+        
 
         if (currentCompSpeed != compSpeed) {
             compSupplySpeeds[address(cToken)] = compSpeed;
@@ -170,11 +227,75 @@ contract RewardsDistributor is ExponentialNoError {
     }
 
     /**
-     * @notice Set COMP speed for a single market
-     * @param cToken The market whose COMP speed to update
+     * @notice Set COMP supply speed for a single market
+     * @param gaugeAddress The gauge for the market whose COMP speed to update
+     */
+    function setCompSupplySpeedInternal(address gaugeAddress) internal {
+        // Get cToken
+        CToken cToken = FuseSupplyGauge(gaugeAddress).cToken();
+
+        uint currentCompSpeed = compSupplySpeeds[address(cToken)];
+        
+        if (currentCompSpeed != 0) {
+            // note that COMP speed could be set to 0 to halt liquidity rewards for a market
+            updateCompSupplyIndex(address(cToken));
+        } 
+        // Add the COMP market
+        (bool isListed, ) = ComptrollerV2Storage(address(cToken.comptroller())).markets(address(cToken));
+        require(isListed == true, "comp market is not listed");
+
+        if (compSupplyState[address(cToken)].index == 0 && compSupplyState[address(cToken)].block == 0) {
+            compSupplyState[address(cToken)] = CompMarketState({
+                index: compInitialIndex,
+                block: safe32(getBlockNumber(), "block number exceeds 32 bits")
+            });
+        }
+        
+        // Calculate the elapsed time in weeks. 
+        uint256 last_time_updated = last_time_gauge_updated[gaugeAddress];
+
+        uint256 weeks_elapsed;
+        // Edge case for first reward update for this gauge
+        if (last_time_updated == 0){
+            weeks_elapsed = 1;
+        }
+        else {
+            // Truncation desired
+            weeks_elapsed = (block.timestamp).sub(last_time_gauge_updated[gaugeAddress]) / ONE_WEEK;
+
+            // Return early here for 0 weeks instead of throwing, as it could have bad effects in other contracts
+            if (weeks_elapsed == 0) {
+                return;
+            }
+        }
+
+        // NOTE: This will always use the current global_emission_rate()
+        // Mutative, for the current week. Makes sure the weight is checkpointed. Also returns the weight.
+        uint256 rel_weight_at_week = gaugeController.gauge_relative_weight_write(gaugeAddress, block.timestamp);
+        uint256 rwd_rate_at_week = (gaugeController.global_emission_rate()).mul(rel_weight_at_week).div(1e18);
+        uint256 compSpeed = rwd_rate_at_week;
+
+        // Update the last time updated
+        last_time_gauge_updated[gaugeAddress] = block.timestamp;
+
+        if (currentCompSpeed != compSpeed) {
+            compSupplySpeeds[address(cToken)] = compSpeed;
+            emit CompSupplySpeedUpdated(cToken, compSpeed);
+        }
+    }
+
+    /**
+     * @notice Set COMP borrow speed for a single market, manually
+     * @param gaugeAddress The gauge address whose COMP speed to update
      * @param compSpeed New COMP speed for market
      */
-    function setCompBorrowSpeedInternal(CToken cToken, uint compSpeed) internal {
+    function setCompBorrowSpeedManual(address gaugeAddress, uint256 compSpeed) public {
+        require(msg.sender == admin, "only admin can set comp speed");
+        require(gauge_whitelist[gaugeAddress], "Gauge not whitelisted");
+
+        // Get cToken
+        CToken cToken = FuseBorrowGauge(gaugeAddress).cToken();
+        
         uint currentCompSpeed = compBorrowSpeeds[address(cToken)];
         if (currentCompSpeed != 0) {
             // note that COMP speed could be set to 0 to halt liquidity rewards for a market
@@ -196,6 +317,64 @@ contract RewardsDistributor is ExponentialNoError {
         if (currentCompSpeed != compSpeed) {
             compBorrowSpeeds[address(cToken)] = compSpeed;
             emit CompBorrowSpeedUpdated(cToken, compSpeed);
+        }
+    }
+
+    /**
+     * @notice Set COMP borrow speed for a single market
+     * @param gaugeAddress The gauge for the market whose COMP speed to update
+     */
+    function setCompBorrowSpeedInternal(address gaugeAddress) internal {
+        // Get cToken
+        CToken cToken = FuseBorrowGauge(gaugeAddress).cToken();
+        
+        uint currentCompSpeed = compBorrowSpeeds[address(cToken)];
+        
+        if (currentCompSpeed != 0) {
+            // note that COMP speed could be set to 0 to halt liquidity rewards for a market
+            Exp memory borrowIndex = Exp({mantissa: CToken(cToken).borrowIndex()});
+            updateCompBorrowIndex(address(cToken), borrowIndex);
+        }
+        
+        // Add the COMP market
+        (bool isListed, ) = ComptrollerV2Storage(address(cToken.comptroller())).markets(address(cToken));
+        require(isListed == true, "comp market is not listed");
+
+        if (compBorrowState[address(cToken)].index == 0 && compBorrowState[address(cToken)].block == 0) {
+            compBorrowState[address(cToken)] = CompMarketState({
+                index: compInitialIndex,
+                block: safe32(getBlockNumber(), "block number exceeds 32 bits")
+            });
+        }
+        
+        // Calculate the elapsed time in weeks. 
+        uint256 last_time_updated = last_time_gauge_updated[gaugeAddress];
+
+        uint256 weeks_elapsed;
+        // Edge case for first reward update for this gauge
+        if (last_time_updated == 0){
+            weeks_elapsed = 1;
+        }
+        else {
+            // Truncation desired
+            weeks_elapsed = (block.timestamp).sub(last_time_gauge_updated[gaugeAddress]) / ONE_WEEK;
+
+            // Return early here for 0 weeks instead of throwing, as it could have bad effects in other contracts
+            if (weeks_elapsed == 0) return;
+        }
+
+        // NOTE: This will always use the current global_emission_rate()
+        // Mutative, for the current week. Makes sure the weight is checkpointed. Also returns the weight.
+        uint256 rel_weight_at_week = gaugeController.gauge_relative_weight_write(gaugeAddress, block.timestamp);
+        uint256 rwd_rate_at_week = (gaugeController.global_emission_rate()).mul(rel_weight_at_week).div(1e18);
+        uint256 compSpeed = rwd_rate_at_week;
+
+        // Update the last time updated
+        last_time_gauge_updated[gaugeAddress] = block.timestamp;
+
+        if (currentCompSpeed != compSpeed) {
+            compSupplySpeeds[address(cToken)] = compSpeed;
+            emit CompSupplySpeedUpdated(cToken, compSpeed);
         }
     }
 
@@ -315,12 +494,12 @@ contract RewardsDistributor is ExponentialNoError {
      * @param contributor The address to calculate contributor rewards for
      */
     function updateContributorRewards(address contributor) public {
-        uint compSpeed = compContributorSpeeds[contributor];
-        uint blockNumber = getBlockNumber();
-        uint deltaBlocks = sub_(blockNumber, lastContributorBlock[contributor]);
+        uint256 compSpeed = compContributorSpeeds[contributor];
+        uint256 blockNumber = getBlockNumber();
+        uint256 deltaBlocks = sub_(blockNumber, lastContributorBlock[contributor]);
         if (deltaBlocks > 0 && compSpeed > 0) {
-            uint newAccrued = mul_(deltaBlocks, compSpeed);
-            uint contributorAccrued = add_(compAccrued[contributor], newAccrued);
+            uint256 newAccrued = mul_(deltaBlocks, compSpeed);
+            uint256 contributorAccrued = add_(compAccrued[contributor], newAccrued);
 
             compAccrued[contributor] = contributorAccrued;
             lastContributorBlock[contributor] = blockNumber;
@@ -410,23 +589,27 @@ contract RewardsDistributor is ExponentialNoError {
     }
 
     /**
-     * @notice Set COMP speed for a single market
-     * @param cToken The market whose COMP speed to update
-     * @param compSpeed New COMP speed for market
+     * @notice Set COMP speed for a single market, based on gauges votes
+     * @param gaugeAddress The gauge address whose COMP speed to update
+     * @dev Needs to be called weekly to update supply speed based on gauge 
+     * votes; if < week, will return
      */
-    function _setCompSupplySpeed(CToken cToken, uint compSpeed) public {
+    function _setCompSupplySpeed(address gaugeAddress) public {
         require(msg.sender == admin, "only admin can set comp speed");
-        setCompSupplySpeedInternal(cToken, compSpeed);
+        require(gauge_whitelist[gaugeAddress], "Gauge not whitelisted");
+        setCompSupplySpeedInternal(gaugeAddress);
     }
 
     /**
-     * @notice Set COMP speed for a single market
-     * @param cToken The market whose COMP speed to update
-     * @param compSpeed New COMP speed for market
+     * @notice Set COMP speed for a single market, based on gauges votes
+     * @param gaugeAddress The gauge address whose COMP speed to update
+     * @dev Needs to be called weekly to update borrow speed based on gauge 
+     * votes; if < week, will return
      */
-    function _setCompBorrowSpeed(CToken cToken, uint compSpeed) public {
+    function _setCompBorrowSpeed(address gaugeAddress) public {
         require(msg.sender == admin, "only admin can set comp speed");
-        setCompBorrowSpeedInternal(cToken, compSpeed);
+        require(gauge_whitelist[gaugeAddress], "Gauge not whitelisted");
+        setCompBorrowSpeedInternal(gaugeAddress);
     }
 
     /**
@@ -459,9 +642,16 @@ contract RewardsDistributor is ExponentialNoError {
         allMarkets.push(cToken);
     }
 
-    /*** Helper Functions */
+    /*** View Functions */
 
     function getBlockNumber() public view returns (uint) {
         return block.number;
+    }
+
+    // Current weekly reward rate
+    function currentReward(address gaugeAddress) public view returns (uint256 reward_amount) {
+        uint256 rel_weight = gaugeController.gauge_relative_weight(gaugeAddress, block.timestamp);
+        uint256 rwd_rate = (gaugeController.global_emission_rate()).mul(rel_weight).div(1e18);
+        reward_amount = rwd_rate.mul(ONE_WEEK);
     }
 }

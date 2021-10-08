@@ -18,7 +18,9 @@
   "author": "Compound Finance",
   "license": "UNLICENSED",
   "devDependencies": {
+    "@nomiclabs/hardhat-vyper": "^2.0.1",
     "bignumber.js": "8.0.1",
+    "hardhat": "^2.5.0",
     "jest-diff": "^24.9.0",
     "jest-junit": "^6.4.0",
     "solium": "^1.2.5",
