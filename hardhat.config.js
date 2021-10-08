@@ -14,7 +14,7 @@ module.exports = {
       chainId: 1337,
       allowUnlimitedContractSize: true,
       forking: {
-        url: "https://eth-mainnet.alchemyapi.io/v2/FBoARh3vTurveT-eIEdESj8luBhaM6Fv",
+        url: ALCHEMY_URL,
         //blockNumber: 13225783
       }
     }
