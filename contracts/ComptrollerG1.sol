@@ -250,6 +250,16 @@ contract ComptrollerG1 is ComptrollerV1Storage, ComptrollerInterface, Comptrolle
         return uint(Error.NO_ERROR);
     }
 
+    function mintWithinLimits(address cToken, uint exchangeRateMantissa, uint accountTokens, uint mintAmount) external returns (uint) {
+        cToken;
+        exchangeRateMantissa;
+        accountTokens;
+        mintAmount;
+
+        return uint(Error.NO_ERROR);
+    }
+
+
     /**
      * @notice Validates mint and reverts on rejection. May emit logs.
      * @param cToken Asset being minted
@@ -354,6 +364,14 @@ contract ComptrollerG1 is ComptrollerV1Storage, ComptrollerInterface, Comptrolle
 
         return uint(Error.NO_ERROR);
     }
+
+    function borrowWithinLimits(address cToken, uint accountBorrowsNew) external returns (uint) {
+        cToken;
+        accountBorrowsNew;
+
+        return uint(Error.NO_ERROR);
+    }
+
 
     /**
      * @notice Validates borrow and reverts on rejection. May emit logs.
@@ -934,11 +952,11 @@ contract ComptrollerG1 is ComptrollerV1Storage, ComptrollerInterface, Comptrolle
         if (!hasAdminRights()) {
             return fail(Error.UNAUTHORIZED, FailureInfo.SUPPORT_MARKET_OWNER_CHECK);
         }
-
+        
         if (markets[address(cToken)].isListed) {
             return fail(Error.MARKET_ALREADY_LISTED, FailureInfo.SUPPORT_MARKET_EXISTS);
         }
-
+        
         cToken.isCToken(); // Sanity check to make sure its really a CToken
 
         markets[address(cToken)] = Market({isListed: true, collateralFactorMantissa: 0});
@@ -990,4 +1008,7 @@ contract ComptrollerG1 is ComptrollerV1Storage, ComptrollerInterface, Comptrolle
         bool isAdmin = hasAdminRights();
         return isAdmin || initializing;
     }
+
+    function _beforeNonReentrant() external {}
+    function _afterNonReentrant() external {}
 }

@@ -15,6 +15,7 @@ async function makeComptroller(opts = {}) {
   } = opts || {};
 
   if (kind == 'bool') {
+    //console.log('comptroller kind is bool');
     return await deploy('BoolComptroller');
   }
 
@@ -29,7 +30,7 @@ async function makeComptroller(opts = {}) {
     const maxAssets = etherUnsigned(dfn(opts.maxAssets, 10));
 
     await send(comptroller, '_setCloseFactor', [closeFactor]);
-    await send(comptroller, '_setMaxAssets', [maxAssets]);
+    //await send(comptroller, '_setMaxAssets', [maxAssets]);
     await send(comptroller, '_setPriceOracle', [priceOracle._address]);
 
     comptroller.options.address = comptroller._address;
@@ -50,7 +51,7 @@ async function makeComptroller(opts = {}) {
     comptroller.options.address = unitroller._address;
     await send(comptroller, '_setLiquidationIncentive', [liquidationIncentive]);
     await send(comptroller, '_setCloseFactor', [closeFactor]);
-    await send(comptroller, '_setMaxAssets', [maxAssets]);
+    //await send(comptroller, '_setMaxAssets', [maxAssets]);
     await send(comptroller, '_setPriceOracle', [priceOracle._address]);
 
     return Object.assign(comptroller, { priceOracle });
@@ -114,8 +115,11 @@ async function makeCToken(opts = {}) {
 
     case 'cerc20':
     default:
+      //console.log('making cerc20');
       underlying = opts.underlying || await makeToken(opts.underlyingOpts);
       cDelegatee = await deploy('CErc20DelegateHarness');
+      //console.log('before delegator');
+      //console.log(interestRateModel);
       cDelegator = await deploy('CErc20Delegator',
         [
           underlying._address,
@@ -129,12 +133,15 @@ async function makeCToken(opts = {}) {
           0
         ]
                                    );
+      //console.log('after delegator');
       cToken = await saddle.getContractAt('CErc20DelegateHarness', cDelegator._address); // XXXS at
       break;
   }
 
   if (opts.supportMarket) {
+    //console.log('before support market');
     await send(comptroller, '_supportMarket', [cToken._address]);
+    //console.log('after support market');
   }
 
   if (opts.underlyingPrice) {

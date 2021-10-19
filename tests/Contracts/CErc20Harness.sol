@@ -158,9 +158,9 @@ contract CErc20DelegateHarness is CErc20Delegate {
     function harnessWithdrawFuseFeesFresh(uint amount) public returns (uint) {
         return _withdrawFuseFeesFresh(amount);
     }
-
+    
     function harnessSetFuseFeeFresh(uint newFuseFeeMantissa) public returns (uint) {
-        return _setFuseFeeFresh(newFuseFeeMantissa);
+        return _setAdminFeeFresh(newFuseFeeMantissa);
     }
 
     function harnessWithdrawAdminFeesFresh(uint amount) public returns (uint) {

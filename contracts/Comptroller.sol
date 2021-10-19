@@ -67,6 +67,8 @@ contract Comptroller is ComptrollerV3Storage, ComptrollerInterface, ComptrollerE
     /// @notice Emitted when a new RewardsDistributor contract is added to hooks
     event AddedRewardsDistributor(address rewardsDistributor);
 
+    event testData(uint colFactorMantissa, uint excRateMantissa);
+
     // closeFactorMantissa must be strictly greater than this value
     uint internal constant closeFactorMinMantissa = 0.05e18; // 0.05
 
@@ -181,11 +183,12 @@ contract Comptroller is ComptrollerV3Storage, ComptrollerInterface, ComptrollerE
         }
 
         /* Fail if the sender is not permitted to redeem all of their tokens */
+        
         uint allowed = redeemAllowedInternal(cTokenAddress, msg.sender, tokensHeld);
         if (allowed != 0) {
             return failOpaque(Error.REJECTION, FailureInfo.EXIT_MARKET_REJECTION, allowed);
         }
-
+        
         Market storage marketToExit = markets[address(cToken)];
 
         /* Return true if the sender is not already ‘in’ the market */
@@ -198,6 +201,7 @@ contract Comptroller is ComptrollerV3Storage, ComptrollerInterface, ComptrollerE
 
         /* Delete cToken from the account’s list of assets */
         // load into memory for faster iteration
+        
         CToken[] memory userAssetList = accountAssets[msg.sender];
         uint len = userAssetList.length;
         uint assetIndex = len;
@@ -215,16 +219,18 @@ contract Comptroller is ComptrollerV3Storage, ComptrollerInterface, ComptrollerE
         CToken[] storage storedList = accountAssets[msg.sender];
         storedList[assetIndex] = storedList[storedList.length - 1];
         storedList.length--;
-
+        
         // If the user has exited all markets, remove them from the `allBorrowers` array
         if (storedList.length == 0) {
             allBorrowers[borrowerIndexes[msg.sender]] = allBorrowers[allBorrowers.length - 1]; // Copy last item in list to location of item to be removed
             allBorrowers.length--; // Reduce length by 1
-            borrowerIndexes[allBorrowers[borrowerIndexes[msg.sender]]] = borrowerIndexes[msg.sender]; // Set borrower index of moved item to correct index
+            if (allBorrowers.length > 0) {
+                borrowerIndexes[allBorrowers[borrowerIndexes[msg.sender]]] = borrowerIndexes[msg.sender]; // Set borrower index of moved item to correct index
+            }
             borrowerIndexes[msg.sender] = 0; // Reset sender borrower index to 0 for a gas refund
             borrowers[msg.sender] = false; // Tell the contract that the sender is no longer a borrower (so it knows to add the borrower back if they enter a market in the future)
         }
-
+        
         emit MarketExited(cToken, msg.sender);
 
         return uint(Error.NO_ERROR);
@@ -862,7 +868,7 @@ contract Comptroller is ComptrollerV3Storage, ComptrollerInterface, ComptrollerE
 
             // Pre-compute a conversion factor from tokens -> ether (normalized price value)
             vars.tokensToDenom = mul_(mul_(vars.collateralFactor, vars.exchangeRate), vars.oraclePrice);
-
+            
             // sumCollateral += tokensToDenom * cTokenBalance
             vars.sumCollateral = mul_ScalarTruncateAddUInt(vars.tokensToDenom, vars.cTokenBalance, vars.sumCollateral);
 
@@ -885,6 +891,7 @@ contract Comptroller is ComptrollerV3Storage, ComptrollerInterface, ComptrollerE
         if (vars.sumCollateral > vars.sumBorrowPlusEffects) {
             return (Error.NO_ERROR, vars.sumCollateral - vars.sumBorrowPlusEffects, 0);
         } else {
+            //return (Error.NO_ERROR, 0, vars.sumBorrowPlusEffects);
             return (Error.NO_ERROR, 0, vars.sumBorrowPlusEffects - vars.sumCollateral);
         }
     }
@@ -1155,7 +1162,7 @@ contract Comptroller is ComptrollerV3Storage, ComptrollerInterface, ComptrollerE
       * @param cToken The address of the market (token) to list
       * @return uint 0=success, otherwise a failure. (See enum Error for details)
       */
-    function _supportMarket(CToken cToken) internal returns (uint) {
+    function _supportMarket(CToken cToken) public returns (uint) {
         // Check caller is admin
         if (!hasAdminRights()) {
             return fail(Error.UNAUTHORIZED, FailureInfo.SUPPORT_MARKET_OWNER_CHECK);

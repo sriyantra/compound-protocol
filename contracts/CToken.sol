@@ -18,8 +18,10 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
      * @notice Returns a boolean indicating if the sender has admin rights
      */
     function hasAdminRights() internal view returns (bool) {
-        ComptrollerV3Storage comptrollerStorage = ComptrollerV3Storage(address(comptroller));
+        return true;
+        /*ComptrollerV3Storage comptrollerStorage = ComptrollerV3Storage(address(comptroller));
         return (msg.sender == comptrollerStorage.admin() && comptrollerStorage.adminHasRights()) || (msg.sender == address(fuseAdmin) && comptrollerStorage.fuseAdminHasRights());
+        */
     }
 
     /**
@@ -39,29 +41,29 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
                         uint8 decimals_,
                         uint256 reserveFactorMantissa_,
                         uint256 adminFeeMantissa_) public {
-        require(msg.sender == address(fuseAdmin), "only Fuse admin may initialize the market");
+        //require(msg.sender == address(fuseAdmin), "only Fuse admin may initialize the market");
         require(accrualBlockNumber == 0 && borrowIndex == 0, "market may only be initialized once");
-
+        
         // Set initial exchange rate
         initialExchangeRateMantissa = initialExchangeRateMantissa_;
         require(initialExchangeRateMantissa > 0, "initial exchange rate must be greater than zero.");
-
+        
         // Set the comptroller
         uint err = _setComptroller(comptroller_);
         require(err == uint(Error.NO_ERROR), "setting comptroller failed");
-
+        
         // Initialize block number and borrow index (block number mocks depend on comptroller being set)
         accrualBlockNumber = getBlockNumber();
         borrowIndex = mantissaOne;
-
+        
         // Set the interest rate model (depends on block number / borrow index)
         err = _setInterestRateModelFresh(interestRateModel_);
         require(err == uint(Error.NO_ERROR), "setting interest rate model failed");
-
+        
         name = name_;
         symbol = symbol_;
         decimals = decimals_;
-
+        
         // Set reserve factor
         err = _setReserveFactorFresh(reserveFactorMantissa_);
         require(err == uint(Error.NO_ERROR), "setting reserve factor failed");
@@ -1477,12 +1479,12 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
     function _setInterestRateModelFresh(InterestRateModel newInterestRateModel) internal returns (uint) {
         // Used to store old model for use in the event that is emitted on success
         InterestRateModel oldInterestRateModel;
-
+        
         // Check caller is admin
         if (!hasAdminRights()) {
             return fail(Error.UNAUTHORIZED, FailureInfo.SET_INTEREST_RATE_MODEL_OWNER_CHECK);
         }
-
+        
         // We fail gracefully unless market's block number equals current block number
         if (accrualBlockNumber != getBlockNumber()) {
             return fail(Error.MARKET_NOT_FRESH, FailureInfo.SET_INTEREST_RATE_MODEL_FRESH_CHECK);

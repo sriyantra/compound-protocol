@@ -23,7 +23,6 @@ describe('Comptroller', () => {
     it("allows a borrow up to collateralFactor, but not more", async () => {
       const collateralFactor = 0.5, underlyingPrice = 1, user = accounts[1], amount = 1e6;
       const cToken = await makeCToken({supportMarket: true, collateralFactor, underlyingPrice});
-
       let error, liquidity, shortfall;
 
       // not in market yet, hypothetical borrow should have no effect
@@ -36,16 +35,27 @@ describe('Comptroller', () => {
 
       // total account liquidity after supplying `amount`
       ({1: liquidity, 2: shortfall} = await call(cToken.comptroller, 'getAccountLiquidity', [user]));
+      //console.log('total account liquidity after supplying `amount`', liquidity, shortfall);
       expect(liquidity).toEqualNumber(amount * collateralFactor);
       expect(shortfall).toEqualNumber(0);
 
       // hypothetically borrow `amount`, should shortfall over collateralFactor
+      //({0: error, 1: liquidity, 2: shortfall} = await call(cToken.comptroller, 'getAccountLiquidity', [user]));
+      //console.log('liquidity, shortfall update', liquidity, shortfall);
       ({1: liquidity, 2: shortfall} = await call(cToken.comptroller, 'getHypotheticalAccountLiquidity', [user, cToken._address, 0, amount]));
+      //console.log('hypothetically borrow `amount`, should shortfall over collateralFactor', liquidity, shortfall)
       expect(liquidity).toEqualNumber(0);
       expect(shortfall).toEqualNumber(amount * (1 - collateralFactor));
 
       // hypothetically redeem `amount`, should be back to even
-      ({1: liquidity, 2: shortfall} = await call(cToken.comptroller, 'getHypotheticalAccountLiquidity', [user, cToken._address, amount, 0]));
+      //({0: error, 1: liquidity, 2: shortfall} = await call(cToken.comptroller, 'getAccountLiquidity', [user]));
+      //console.log('liquidity, shortfall update', liquidity, shortfall);
+      
+      //({0: error, 1: cTokenBalance, 2: borrowBalance, 3: exchangeRateMantissa} = await call(cToken, 'getAccountSnapshot', [user]));
+      //console.log('account snapshot: ', error, cTokenBalance, borrowBalance, exchangeRateMantissa);
+      // amount * 5 to account for built-in initial exchange rate mantissa of 0.2e17
+      ({1: liquidity, 2: shortfall} = await call(cToken.comptroller, 'getHypotheticalAccountLiquidity', [user, cToken._address, amount * 5, 0]));
+      //console.log('hypothetically redeem `amount`, should be back to even', liquidity, shortfall);
       expect(liquidity).toEqualNumber(0);
       expect(shortfall).toEqualNumber(0);
     }, 20000);
@@ -81,7 +91,15 @@ describe('Comptroller', () => {
       expect(liquidity).toEqualNumber(0);
       expect(shortfall).toEqualNumber(c1);
 
-      ({1: liquidity, 2: shortfall} = await call(cToken1.comptroller, 'getHypotheticalAccountLiquidity', [user, cToken1._address, amount1, 0]));
+      //({0: error, 1: liquidity, 2: shortfall} = await call(cToken1.comptroller, 'getAccountLiquidity', [user]));
+      //console.log('liquidity, shortfall update', liquidity, shortfall);
+
+      //({0: error, 1: cTokenBalance, 2: borrowBalance, 3: exchangeRateMantissa} = await call(cToken1, 'getAccountSnapshot', [user]));
+      //console.log(error, cTokenBalance, borrowBalance, exchangeRateMantissa);
+
+      // amount * 5 to account for built-in initial exchange rate mantissa of 0.2e17
+      ({1: liquidity, 2: shortfall} = await call(cToken1.comptroller, 'getHypotheticalAccountLiquidity', [user, cToken1._address, amount1 * 5, 0]));
+      //console.log('liquidity and shortfall', liquidity, shortfall);
       expect(liquidity).toEqualNumber(Math.floor(c2));
       expect(shortfall).toEqualNumber(0);
     });

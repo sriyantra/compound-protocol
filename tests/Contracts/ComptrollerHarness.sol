@@ -52,7 +52,7 @@ contract ComptrollerBorked {
     }
 }
 
-contract BoolComptroller is ComptrollerInterface {
+contract BoolComptroller is ComptrollerInterface, ComptrollerV3Storage {
     bool allowMint = true;
     bool allowRedeem = true;
     bool allowBorrow = true;
@@ -267,6 +267,11 @@ contract BoolComptroller is ComptrollerInterface {
         _repayAmount;
         return failCalculateSeizeTokens ? (opaqueError, 0) : (noError, calculatedSeizeTokens);
     }
+
+    /*** NonReentrancy ***/
+
+    function _beforeNonReentrant() external {}
+    function _afterNonReentrant() external {}
 
     /**** Mock Settors ****/
 

@@ -37,7 +37,7 @@ contract CErc20Delegator is CDelegationStorage {
                                                             symbol_,
                                                             reserveFactorMantissa_,
                                                             adminFeeMantissa_));
-
+        
         // New implementations always get set via the settor (post-initialize)
         delegateTo(implementation_, abi.encodeWithSignature("_setImplementationSafe(address,bool,bytes)", implementation_, false, becomeImplementationData));
     }
