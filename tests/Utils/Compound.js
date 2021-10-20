@@ -40,6 +40,7 @@ async function makeComptroller(opts = {}) {
 
   if (kind == 'unitroller-v1') {
     const unitroller = await deploy('Unitroller');
+    console.log(root, await call(comptroller, 'admin'));
     const comptroller = await deploy('ComptrollerHarness');
     const priceOracle = opts.priceOracle || await makePriceOracle(opts.priceOracleOpts);
     const closeFactor = etherMantissa(dfn(opts.closeFactor, .051));
@@ -51,7 +52,6 @@ async function makeComptroller(opts = {}) {
     comptroller.options.address = unitroller._address;
     await send(comptroller, '_setLiquidationIncentive', [liquidationIncentive]);
     await send(comptroller, '_setCloseFactor', [closeFactor]);
-    //await send(comptroller, '_setMaxAssets', [maxAssets]);
     await send(comptroller, '_setPriceOracle', [priceOracle._address]);
 
     return Object.assign(comptroller, { priceOracle });

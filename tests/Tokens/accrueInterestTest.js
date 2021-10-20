@@ -163,7 +163,7 @@ describe('CToken', () => {
       expect(await call(cToken, 'borrowIndex')).toEqualNumber(expectedBorrowIndex);
       expect(await call(cToken, 'totalBorrows')).toEqualNumber(expectedTotalBorrows);
       expect(await call(cToken, 'totalReserves')).toEqualNumber(expectedTotalReserves);
-      //expect(await call(cToken, 'totalAdminFees')).toEqualNumber(expectedTotalAdminFees);
+      expect(await call(cToken, 'totalAdminFees')).toEqualNumber(expectedTotalAdminFees);
       expect(await call(cToken, 'totalFuseFees')).toEqualNumber(expectedTotalFuseFees);
     });
   });

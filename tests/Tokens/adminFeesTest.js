@@ -68,7 +68,7 @@ describe('CToken', function () {
   describe('_setAdminFee', () => {
     let cToken;
     beforeEach(async () => {
-      cToken = await makeCToken();
+      cToken = await makeCToken({supportMarket: true});
     });
 
     beforeEach(async () => {
@@ -101,7 +101,7 @@ describe('CToken', function () {
   describe("_withdrawAdminFeesFresh", () => {
     let cToken;
     beforeEach(async () => {
-      cToken = await makeCToken();
+      cToken = await makeCToken({supportMarket: true});
       expect(await send(cToken, 'harnessSetTotalAdminFees', [adminFees])).toSucceed();
       expect(
         await send(cToken.underlying, 'harnessSetBalance', [cToken._address, cash])
@@ -137,7 +137,7 @@ describe('CToken', function () {
   describe("_withdrawAdminFees", () => {
     let cToken;
     beforeEach(async () => {
-      cToken = await makeCToken();
+      cToken = await makeCToken({supportMarket: true});
       await send(cToken.interestRateModel, 'setFailBorrowRate', [false]);
       expect(await send(cToken, 'harnessSetTotalAdminFees', [adminFees])).toSucceed();
       expect(

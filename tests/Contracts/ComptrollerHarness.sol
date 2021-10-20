@@ -53,6 +53,10 @@ contract ComptrollerBorked {
 }
 
 contract BoolComptroller is ComptrollerInterface, ComptrollerV3Storage {
+    constructor() public {
+        admin = msg.sender;
+    }
+
     bool allowMint = true;
     bool allowRedeem = true;
     bool allowBorrow = true;
