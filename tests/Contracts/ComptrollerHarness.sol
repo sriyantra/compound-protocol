@@ -64,7 +64,7 @@ contract BoolComptroller is ComptrollerInterface, ComptrollerV3Storage {
     bool allowLiquidateBorrow = true;
     bool allowSeize = true;
     bool allowTransfer = true;
-
+    
     bool verifyMint = true;
     bool verifyRedeem = true;
     bool verifyBorrow = true;
@@ -72,7 +72,7 @@ contract BoolComptroller is ComptrollerInterface, ComptrollerV3Storage {
     bool verifyLiquidateBorrow = true;
     bool verifySeize = true;
     bool verifyTransfer = true;
-
+    
     bool failCalculateSeizeTokens;
     uint calculatedSeizeTokens;
 

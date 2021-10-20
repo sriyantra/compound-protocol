@@ -40,7 +40,6 @@ async function makeComptroller(opts = {}) {
 
   if (kind == 'unitroller-v1') {
     const unitroller = await deploy('Unitroller');
-    console.log(root, await call(comptroller, 'admin'));
     const comptroller = await deploy('ComptrollerHarness');
     const priceOracle = opts.priceOracle || await makePriceOracle(opts.priceOracleOpts);
     const closeFactor = etherMantissa(dfn(opts.closeFactor, .051));

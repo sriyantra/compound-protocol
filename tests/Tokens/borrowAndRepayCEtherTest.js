@@ -279,7 +279,7 @@ describe('CEther', function () {
 
     it("reverts when repay borrow fresh fails", async () => {
       await send(cToken.comptroller, 'setRepayBorrowAllowed', [false]);
-      await expect(repayBorrow(cToken, borrower, repayAmount)).rejects.toRevertWithError('COMPTROLLER_REJECTION', "revert repayBorrow failed");
+      await expect(repayBorrow(cToken, borrower, repayAmount)).rejects.toRevert("revert repayBorrow failed (1011)");
     });
 
     it("returns success from repayBorrowFresh and repays the right amount", async () => {
@@ -313,7 +313,7 @@ describe('CEther', function () {
 
     it("reverts from within repay borrow fresh", async () => {
       await send(cToken.comptroller, 'setRepayBorrowAllowed', [false]);
-      await expect(repayBorrowBehalf(cToken, payer, borrower, repayAmount)).rejects.toRevertWithError('COMPTROLLER_REJECTION', "revert repayBorrowBehalf failed");
+      await expect(repayBorrowBehalf(cToken, payer, borrower, repayAmount)).rejects.toRevert("revert repayBorrowBehalf failed (1011)");
     });
 
     it("returns success from repayBorrowFresh and repays the right amount", async () => {
