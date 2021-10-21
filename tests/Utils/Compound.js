@@ -15,8 +15,10 @@ async function makeComptroller(opts = {}) {
   } = opts || {};
 
   if (kind == 'bool') {
-    //console.log('comptroller kind is bool');
-    return await deploy('BoolComptroller');
+    const comptroller = await deploy('BoolComptroller');
+    //console.log('1');
+    //console.log(call(comptroller, 'allowMint'));
+    return comptroller;
   }
 
   if (kind == 'false-marker') {
@@ -30,7 +32,6 @@ async function makeComptroller(opts = {}) {
     const maxAssets = etherUnsigned(dfn(opts.maxAssets, 10));
 
     await send(comptroller, '_setCloseFactor', [closeFactor]);
-    //await send(comptroller, '_setMaxAssets', [maxAssets]);
     await send(comptroller, '_setPriceOracle', [priceOracle._address]);
 
     comptroller.options.address = comptroller._address;
@@ -114,7 +115,7 @@ async function makeCToken(opts = {}) {
 
     case 'cerc20':
     default:
-      //console.log('making cerc20');
+      //onsole.log('making cerc20');
       underlying = opts.underlying || await makeToken(opts.underlyingOpts);
       cDelegatee = await deploy('CErc20DelegateHarness');
       //console.log('before delegator');

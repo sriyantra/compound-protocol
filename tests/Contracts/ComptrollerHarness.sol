@@ -52,7 +52,7 @@ contract ComptrollerBorked {
     }
 }
 
-contract BoolComptroller is ComptrollerInterface, ComptrollerV3Storage {
+contract BoolComptroller is /*Comptroller {*/ ComptrollerInterface, ComptrollerV3Storage {
     constructor() public {
         admin = msg.sender;
     }
@@ -81,7 +81,7 @@ contract BoolComptroller is ComptrollerInterface, ComptrollerV3Storage {
 
     /*** Assets You Are In ***/
 
-    function enterMarkets(address[] calldata _cTokens) external returns (uint[] memory) {
+    function enterMarkets(address[] memory _cTokens) public returns (uint[] memory) {
         _cTokens;
         uint[] memory ret;
         return ret;
@@ -274,8 +274,12 @@ contract BoolComptroller is ComptrollerInterface, ComptrollerV3Storage {
 
     /*** NonReentrancy ***/
 
-    function _beforeNonReentrant() external {}
-    function _afterNonReentrant() external {}
+    function _beforeNonReentrant() external {
+        _notEntered = false;
+    }
+    function _afterNonReentrant() external {
+        _notEntered = true;
+    }
 
     /**** Mock Settors ****/
 
