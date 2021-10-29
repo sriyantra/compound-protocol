@@ -52,7 +52,7 @@ contract ComptrollerBorked {
     }
 }
 
-contract BoolComptroller is /*Comptroller {*/ ComptrollerInterface, ComptrollerV3Storage {
+contract BoolComptroller is ComptrollerInterface, ComptrollerV3Storage {
     constructor() public {
         admin = msg.sender;
     }
@@ -275,10 +275,10 @@ contract BoolComptroller is /*Comptroller {*/ ComptrollerInterface, ComptrollerV
     /*** NonReentrancy ***/
 
     function _beforeNonReentrant() external {
-        _notEntered = false;
+        //_notEntered = false;
     }
     function _afterNonReentrant() external {
-        _notEntered = true;
+        //_notEntered = true;
     }
 
     /**** Mock Settors ****/

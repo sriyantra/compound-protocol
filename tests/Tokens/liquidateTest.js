@@ -10,7 +10,8 @@ const {
   getBalances,
   adjustBalances,
   pretendBorrow,
-  preApprove
+  preApprove,
+  totalSupply
 } = require('../Utils/Compound');
 
 const repayAmount = etherUnsigned(10e2);
@@ -30,6 +31,7 @@ async function preLiquidate(cToken, liquidator, borrower, repayAmount, cTokenCol
   await send(cToken.interestRateModel, 'setFailBorrowRate', [false]);
   await send(cTokenCollateral.interestRateModel, 'setFailBorrowRate', [false]);
   await send(cTokenCollateral.comptroller, 'setCalculatedSeizeTokens', [seizeTokens]);
+  await send(cTokenCollateral, 'harnessSetTotalSupply', [100000000]);
   await setBalance(cTokenCollateral, liquidator, 0);
   await setBalance(cTokenCollateral, borrower, seizeTokens);
   await pretendBorrow(cTokenCollateral, borrower, 0, 1, 0);
@@ -132,9 +134,10 @@ describe('CToken', function () {
 
     it("reverts if liquidateBorrowVerify fails", async() => {
       await send(cToken.comptroller, 'setLiquidateBorrowVerify', [false]);
-      await expect(
-        liquidateFresh(cToken, liquidator, borrower, repayAmount, cTokenCollateral)
-      ).rejects.toRevert("revert liquidateBorrowVerify rejected liquidateBorrow");
+      // unused function
+      // await expect(
+      //   liquidateFresh(cToken, liquidator, borrower, repayAmount, cTokenCollateral)
+      // ).rejects.toRevert("revert liquidateBorrowVerify rejected liquidateBorrow");
     });
 
     it("transfers the cash, borrows, tokens, and emits Transfer, LiquidateBorrow events", async () => {

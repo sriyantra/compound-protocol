@@ -929,19 +929,19 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
 
         (vars.mathErr, vars.totalBorrowsNew) = subUInt(totalBorrows, vars.actualRepayAmount);
         require(vars.mathErr == MathError.NO_ERROR, "REPAY_BORROW_NEW_TOTAL_BALANCE_CALCULATION_FAILED");
-
+        
         /* We write the previously calculated values into storage */
         accountBorrows[borrower].principal = vars.accountBorrowsNew;
         accountBorrows[borrower].interestIndex = borrowIndex;
         totalBorrows = vars.totalBorrowsNew;
-
+        
         /* We emit a RepayBorrow event */
         emit RepayBorrow(payer, borrower, vars.actualRepayAmount, vars.accountBorrowsNew, vars.totalBorrowsNew);
 
         /* We call the defense hook */
         // unused function
         // comptroller.repayBorrowVerify(address(this), payer, borrower, vars.actualRepayAmount, vars.borrowerIndex);
-
+        
         return (uint(Error.NO_ERROR), vars.actualRepayAmount);
     }
 
@@ -1015,6 +1015,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
         /* Fail if repayBorrow fails */
         (uint repayBorrowError, uint actualRepayAmount) = repayBorrowFresh(liquidator, borrower, repayAmount);
         if (repayBorrowError != uint(Error.NO_ERROR)) {
+            repayBorrowError = repayBorrowError > 1000 ? fail(Error.COMPTROLLER_REJECTION, FailureInfo.REPAY_BORROW_COMPTROLLER_REJECTION) : repayBorrowError;
             return (fail(Error(repayBorrowError), FailureInfo.LIQUIDATE_REPAY_BORROW_FRESH_FAILED), 0);
         }
 
@@ -1039,10 +1040,10 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
         }
         
         /* Revert if seize tokens fails (since we cannot be sure of side effects) */
-        //require(seizeError == uint(Error.NO_ERROR), "token seizure failed");
+        require(seizeError == uint(Error.NO_ERROR), "token seizure failed");
 
         /* We emit a LiquidateBorrow event */
-        //emit LiquidateBorrow(liquidator, borrower, actualRepayAmount, address(cTokenCollateral), seizeTokens);
+        emit LiquidateBorrow(liquidator, borrower, actualRepayAmount, address(cTokenCollateral), seizeTokens);
 
         /* We call the defense hook */
         // unused function
@@ -1112,7 +1113,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
 
         vars.protocolSeizeTokens = mul_(seizeTokens, Exp({mantissa: protocolSeizeShareMantissa}));
         vars.liquidatorSeizeTokens = sub_(seizeTokens, vars.protocolSeizeTokens);
-
+        
         (vars.mathErr, vars.exchangeRateMantissa) = exchangeRateStoredInternal();
         require(vars.mathErr == MathError.NO_ERROR, "exchange rate math error");
 
@@ -1120,12 +1121,13 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
 
         vars.totalReservesNew = add_(totalReserves, vars.protocolSeizeAmount);
         vars.totalSupplyNew = sub_(totalSupply, vars.protocolSeizeTokens);
-
+        
         (vars.mathErr, vars.liquidatorTokensNew) = addUInt(accountTokens[liquidator], vars.liquidatorSeizeTokens);
         if (vars.mathErr != MathError.NO_ERROR) {
             return failOpaque(Error.MATH_ERROR, FailureInfo.LIQUIDATE_SEIZE_BALANCE_INCREMENT_FAILED, uint(vars.mathErr));
+        
         }
-
+        
         /////////////////////////
         // EFFECTS & INTERACTIONS
         // (No safe failures beyond this point)
