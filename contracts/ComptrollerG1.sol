@@ -952,11 +952,11 @@ contract ComptrollerG1 is ComptrollerV1Storage, ComptrollerInterface, Comptrolle
         if (!hasAdminRights()) {
             return fail(Error.UNAUTHORIZED, FailureInfo.SUPPORT_MARKET_OWNER_CHECK);
         }
-        
+
         if (markets[address(cToken)].isListed) {
             return fail(Error.MARKET_ALREADY_LISTED, FailureInfo.SUPPORT_MARKET_EXISTS);
         }
-        
+
         cToken.isCToken(); // Sanity check to make sure its really a CToken
 
         markets[address(cToken)] = Market({isListed: true, collateralFactorMantissa: 0});
