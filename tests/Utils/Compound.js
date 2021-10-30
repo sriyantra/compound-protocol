@@ -7,6 +7,7 @@ const {
   etherMantissa,
   etherUnsigned
 } = require('./Ethereum');
+const BigNumber = require('bignumber.js');
 
 async function makeComptroller(opts = {}) {
   const {
@@ -16,8 +17,6 @@ async function makeComptroller(opts = {}) {
 
   if (kind == 'bool') {
     const comptroller = await deploy('BoolComptroller');
-    //console.log('1');
-    //console.log(call(comptroller, 'allowMint'));
     return comptroller;
   }
 
@@ -286,7 +285,7 @@ async function adjustBalances(balances, deltas) {
       ([cToken, key, diff] = delta);
       account = cToken._address;
     }
-    balances[cToken._address][account][key] = balances[cToken._address][account][key].add(diff);
+    balances[cToken._address][account][key] = new BigNumber(balances[cToken._address][account][key]).plus(diff);
   }
   return balances;
 }
