@@ -75,7 +75,7 @@ describe('CToken', function () {
     cTokenCollateral = await makeCToken({comptroller: cToken.comptroller});
     expect(await send(cTokenCollateral, 'harnessSetExchangeRate', [exchangeRate])).toSucceed();
   });
-  
+
   beforeEach(async () => {
     await preLiquidate(cToken, liquidator, borrower, repayAmount, cTokenCollateral);
   });

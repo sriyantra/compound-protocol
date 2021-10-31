@@ -64,7 +64,7 @@ contract BoolComptroller is ComptrollerInterface, ComptrollerV3Storage {
     bool allowLiquidateBorrow = true;
     bool allowSeize = true;
     bool allowTransfer = true;
-    
+
     bool verifyMint = true;
     bool verifyRedeem = true;
     bool verifyBorrow = true;
@@ -72,7 +72,7 @@ contract BoolComptroller is ComptrollerInterface, ComptrollerV3Storage {
     bool verifyLiquidateBorrow = true;
     bool verifySeize = true;
     bool verifyTransfer = true;
-    
+
     bool failCalculateSeizeTokens;
     uint calculatedSeizeTokens;
 
@@ -275,10 +275,10 @@ contract BoolComptroller is ComptrollerInterface, ComptrollerV3Storage {
     /*** NonReentrancy ***/
 
     function _beforeNonReentrant() external {
-        //_notEntered = false;
+        _notEntered = false;
     }
     function _afterNonReentrant() external {
-        //_notEntered = true;
+        _notEntered = true;
     }
 
     /**** Mock Settors ****/

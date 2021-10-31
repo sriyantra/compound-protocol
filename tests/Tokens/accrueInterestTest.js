@@ -29,7 +29,6 @@ describe('CToken', () => {
   beforeEach(async () => {
     [root, ...accounts] = saddle.accounts;
     cToken = await makeCToken({comptrollerOpts: {kind: 'bool'}});
-    //console.log(cToken);
   });
 
   beforeEach(async () => {
@@ -148,8 +147,6 @@ describe('CToken', () => {
       const expectedTotalReserves = startingTotalReserves + startingTotalBorrows *  borrowRate * reserveFactor / 1e18;
       const expectedTotalAdminFees = startingTotalAdminFees + startingTotalBorrows *  borrowRate * adminFee / 1e18;
       const expectedTotalFuseFees = startingTotalFuseFees + startingTotalBorrows *  borrowRate * fuseFee / 1e18;
-      console.log(expectedTotalAdminFees);
-      console.log(expectedTotalFuseFees);
 
       const receipt = await send(cToken, 'accrueInterest')
       expect(receipt).toSucceed();

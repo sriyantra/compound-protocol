@@ -108,17 +108,17 @@ describe('assetListTest', () => {
       // Not in ZRX, should exit fine
       await exitAndCheckMarkets(ZRX, [OMG, BAT], 'NO_ERROR');
     });
-    
+
     it("properly removes when there's only one asset", async () => {
       await enterAndCheckMarkets([OMG], [OMG]);
       await exitAndCheckMarkets(OMG, [], 'NO_ERROR');
     });
-    
+
     it("properly removes when there's only two assets, removing the first", async () => {
       await enterAndCheckMarkets([OMG, BAT], [OMG, BAT]);
       await exitAndCheckMarkets(OMG, [BAT], 'NO_ERROR');
     });
-    
+
     it("properly removes when there's only two assets, removing the second", async () => {
       await enterAndCheckMarkets([OMG, BAT], [OMG, BAT]);
       await exitAndCheckMarkets(BAT, [OMG], 'NO_ERROR');

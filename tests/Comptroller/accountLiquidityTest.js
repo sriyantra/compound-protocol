@@ -83,7 +83,6 @@ describe('Comptroller', () => {
 
       // amount * 5 to account for built-in initial exchange rate mantissa of 0.2e17
       ({1: liquidity, 2: shortfall} = await call(cToken1.comptroller, 'getHypotheticalAccountLiquidity', [user, cToken1._address, amount1 * 5, 0]));
-      //console.log('liquidity and shortfall', liquidity, shortfall);
       expect(liquidity).toEqualNumber(Math.floor(c2));
       expect(shortfall).toEqualNumber(0);
     });

@@ -891,7 +891,6 @@ contract Comptroller is ComptrollerV3Storage, ComptrollerInterface, ComptrollerE
         if (vars.sumCollateral > vars.sumBorrowPlusEffects) {
             return (Error.NO_ERROR, vars.sumCollateral - vars.sumBorrowPlusEffects, 0);
         } else {
-            //return (Error.NO_ERROR, 0, vars.sumBorrowPlusEffects);
             return (Error.NO_ERROR, 0, vars.sumBorrowPlusEffects - vars.sumCollateral);
         }
     }

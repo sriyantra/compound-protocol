@@ -108,9 +108,7 @@ describe('ComptrollerV1', function() {
       });
 
       it('fails if factor is too high', async () => {
-        console.log('bfeore make ctoken');
         const cToken = await makeCToken({ supportMarket: true, comptroller: unitrollerAsComptroller });
-        console.log('after make ctoken');
         expect(
           await send(unitrollerAsComptroller, '_setCollateralFactor', [cToken._address, one])
         ).toHaveTrollFailure('INVALID_COLLATERAL_FACTOR', 'SET_COLLATERAL_FACTOR_VALIDATION');

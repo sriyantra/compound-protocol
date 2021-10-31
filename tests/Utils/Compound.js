@@ -114,11 +114,8 @@ async function makeCToken(opts = {}) {
 
     case 'cerc20':
     default:
-      //onsole.log('making cerc20');
       underlying = opts.underlying || await makeToken(opts.underlyingOpts);
       cDelegatee = await deploy('CErc20DelegateHarness');
-      //console.log('before delegator');
-      //console.log(interestRateModel);
       cDelegator = await deploy('CErc20Delegator',
         [
           underlying._address,
@@ -132,15 +129,12 @@ async function makeCToken(opts = {}) {
           0
         ]
                                    );
-      //console.log('after delegator');
       cToken = await saddle.getContractAt('CErc20DelegateHarness', cDelegator._address); // XXXS at
       break;
   }
 
   if (opts.supportMarket) {
-    //console.log('before support market');
     await send(comptroller, '_supportMarket', [cToken._address]);
-    //console.log('after support market');
   }
 
   if (opts.underlyingPrice) {

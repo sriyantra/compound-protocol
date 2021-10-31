@@ -18,7 +18,6 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
      * @notice Returns a boolean indicating if the sender has admin rights
      */
     function hasAdminRights() internal view returns (bool) {
-        //return true;
         ComptrollerV3Storage comptrollerStorage = ComptrollerV3Storage(address(comptroller));
         return (msg.sender == comptrollerStorage.admin() && comptrollerStorage.adminHasRights()) || (msg.sender == address(fuseAdmin) && comptrollerStorage.fuseAdminHasRights());
     }
@@ -62,7 +61,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
         name = name_;
         symbol = symbol_;
         decimals = decimals_;
-        
+
         // Set reserve factor
         err = _setReserveFactorFresh(reserveFactorMantissa_);
         require(err == uint(Error.NO_ERROR), "setting reserve factor failed");
@@ -1027,7 +1026,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
 
         (uint amountSeizeError, uint seizeTokens) = comptroller.liquidateCalculateSeizeTokens(address(this), address(cTokenCollateral), actualRepayAmount);
         require(amountSeizeError == uint(Error.NO_ERROR), "LIQUIDATE_COMPTROLLER_CALCULATE_AMOUNT_SEIZE_FAILED");
-        
+
         /* Revert if borrower collateral token balance < seizeTokens */
         require(cTokenCollateral.balanceOf(borrower) >= seizeTokens, "LIQUIDATE_SEIZE_TOO_MUCH");
 
