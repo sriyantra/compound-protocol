@@ -1,18 +1,13 @@
 const {address} = require('../Utils/Ethereum');
-const {
-  makeCToken,
-  makeComptroller,
-  makePriceOracle
-} = require('../Utils/Compound');
 
 describe('admin / _setPendingAdmin / _acceptAdmin', () => {
-  let cToken, root, accounts;
-
+  let root, accounts;
+  let comptroller;
   beforeEach(async () => {
     [root, ...accounts] = saddle.accounts;
     comptroller = await deploy('Unitroller');
   });
-  
+
   describe('admin()', () => {
     it('should return correct admin', async () => {
       expect(await call(comptroller, 'admin')).toEqual(root);
@@ -21,7 +16,7 @@ describe('admin / _setPendingAdmin / _acceptAdmin', () => {
 
   describe('pendingAdmin()', () => {
     it('should return correct pending admin', async () => {
-      expect(await call(comptroller, 'pendingAdmin')).toBeAddressZero();
+      expect(await call(comptroller, 'pendingAdmin')).toBeAddressZero()
     });
   });
 
@@ -29,16 +24,13 @@ describe('admin / _setPendingAdmin / _acceptAdmin', () => {
     it('should only be callable by admin', async () => {
       expect(
         await send(comptroller, '_setPendingAdmin', [accounts[0]], {from: accounts[0]})
-      ).toHaveTokenFailure(
-        'UNAUTHORIZED',
-        'SET_PENDING_ADMIN_OWNER_CHECK'
-      );
+      ).toHaveTrollFailure('UNAUTHORIZED', 'SET_PENDING_ADMIN_OWNER_CHECK');
 
       // Check admin stays the same
       expect(await call(comptroller, 'admin')).toEqual(root);
       expect(await call(comptroller, 'pendingAdmin')).toBeAddressZero();
     });
-    
+
     it('should properly set pending admin', async () => {
       expect(await send(comptroller, '_setPendingAdmin', [accounts[0]])).toSucceed();
 
@@ -67,12 +59,7 @@ describe('admin / _setPendingAdmin / _acceptAdmin', () => {
 
   describe('_acceptAdmin()', () => {
     it('should fail when pending admin is zero', async () => {
-      expect(
-        await send(comptroller, '_acceptAdmin')
-      ).toHaveTokenFailure(
-        'UNAUTHORIZED',
-        'ACCEPT_ADMIN_PENDING_ADMIN_CHECK'
-      );
+      expect(await send(comptroller, '_acceptAdmin')).toHaveTrollFailure('UNAUTHORIZED', 'ACCEPT_ADMIN_PENDING_ADMIN_CHECK');
 
       // Check admin stays the same
       expect(await call(comptroller, 'admin')).toEqual(root);
@@ -81,16 +68,11 @@ describe('admin / _setPendingAdmin / _acceptAdmin', () => {
 
     it('should fail when called by another account (e.g. root)', async () => {
       expect(await send(comptroller, '_setPendingAdmin', [accounts[0]])).toSucceed();
-      expect(
-        await send(comptroller, '_acceptAdmin')
-      ).toHaveTokenFailure(
-        'UNAUTHORIZED',
-        'ACCEPT_ADMIN_PENDING_ADMIN_CHECK'
-      );
+      expect(await send(comptroller, '_acceptAdmin')).toHaveTrollFailure('UNAUTHORIZED', 'ACCEPT_ADMIN_PENDING_ADMIN_CHECK');
 
       // Check admin stays the same
       expect(await call(comptroller, 'admin')).toEqual(root);
-      expect(await call(comptroller, 'pendingAdmin') [accounts[0]]).toEqual();
+      expect(await call(comptroller, 'pendingAdmin')).toEqual(accounts[0]);
     });
 
     it('should succeed and set admin and clear pending admin', async () => {

@@ -9,7 +9,7 @@ const {fastForward, makeCToken} = require('../Utils/Compound');
 const factor = etherMantissa(.02);
 
 const fuseFees = etherUnsigned(3e12);
-const cash = etherUnsigned(fuseFees.mul(2));
+const cash = etherUnsigned(fuseFees.multipliedBy(2));
 const reduction = etherUnsigned(2e12);
 
 describe('CToken', function () {
@@ -112,12 +112,12 @@ describe('CToken', function () {
     });
 
     it("fails if amount exceeds Fuse fees", async () => {
-      expect(await send(cToken, 'harnessWithdrawFuseFeesFresh', [fuseFees.add(1)])).toHaveTokenFailure('BAD_INPUT', 'WITHDRAW_FUSE_FEES_VALIDATION');
+      expect(await send(cToken, 'harnessWithdrawFuseFeesFresh', [fuseFees.plus(1)])).toHaveTokenFailure('BAD_INPUT', 'WITHDRAW_FUSE_FEES_VALIDATION');
       expect(await call(cToken, 'totalFuseFees')).toEqualNumber(fuseFees);
     });
 
     it("fails if amount exceeds available cash", async () => {
-      const cashLessThanFuseFees = fuseFees.sub(2);
+      const cashLessThanFuseFees = fuseFees.minus(2);
       await send(cToken.underlying, 'harnessSetBalance', [cToken._address, cashLessThanFuseFees]);
       expect(await send(cToken, 'harnessWithdrawFuseFeesFresh', [fuseFees])).toHaveTokenFailure('TOKEN_INSUFFICIENT_CASH', 'WITHDRAW_FUSE_FEES_CASH_NOT_AVAILABLE');
       expect(await call(cToken, 'totalFuseFees')).toEqualNumber(fuseFees);
@@ -126,7 +126,7 @@ describe('CToken', function () {
     it("increases Fuse admin balance and reduces Fuse fees on success", async () => {
       const balance = etherUnsigned(await call(cToken.underlying, 'balanceOf', ["0xa731585ab05fC9f83555cf9Bff8F58ee94e18F85"]));
       expect(await send(cToken, 'harnessWithdrawFuseFeesFresh', [fuseFees])).toSucceed();
-      expect(await call(cToken.underlying, 'balanceOf', ["0xa731585ab05fC9f83555cf9Bff8F58ee94e18F85"])).toEqualNumber(balance.add(fuseFees));
+      expect(await call(cToken.underlying, 'balanceOf', ["0xa731585ab05fC9f83555cf9Bff8F58ee94e18F85"])).toEqualNumber(balance.plus(fuseFees));
       expect(await call(cToken, 'totalFuseFees')).toEqualNumber(0);
     });
   });
@@ -149,7 +149,7 @@ describe('CToken', function () {
     });
 
     it("returns error from _withdrawFuseFeesFresh without emitting any extra logs", async () => {
-      const {reply, receipt} = await both(cToken, 'harnessWithdrawFuseFeesFresh', [fuseFees.add(1)]);
+      const {reply, receipt} = await both(cToken, 'harnessWithdrawFuseFeesFresh', [fuseFees.plus(1)]);
       expect(reply).toHaveTokenError('BAD_INPUT');
       expect(receipt).toHaveTokenFailure('BAD_INPUT', 'WITHDRAW_FUSE_FEES_VALIDATION');
     });
