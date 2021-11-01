@@ -291,7 +291,7 @@ describe('Comptroller', () => {
     await send(cTokenBorrow, 'harnessSetExchangeRate', [etherExp(1)]);
     expect(await enterMarkets([cTokenCollat], borrower)).toSucceed();
     expect(await send(cTokenCollat, 'mint', [collatAmount], {from: borrower})).toSucceed();
-    //expect(await send(cTokenBorrow, 'borrow', [borrowAmount], {from: borrower})).toSucceed();
+    expect(await send(cTokenBorrow, 'borrow', [borrowAmount], {from: borrower})).toSucceed();
 
     // show the account is healthy
     expect(await call(comptroller, 'isDeprecated', [cTokenBorrow._address])).toEqual(false);

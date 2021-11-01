@@ -57,7 +57,7 @@ contract CErc20Delegate is CDelegateInterface, CErc20 {
         // Call _resignImplementation internally (this delegate's code)
         
         if (allowResign) _resignImplementation();
-        
+
         // Get old implementation
         address oldImplementation = implementation;
 
@@ -69,7 +69,6 @@ contract CErc20Delegate is CDelegateInterface, CErc20 {
 
         // Emit event
         emit NewImplementation(oldImplementation, implementation);
-        
     }
 
     /**

@@ -16,8 +16,7 @@ async function makeComptroller(opts = {}) {
   } = opts || {};
 
   if (kind == 'bool') {
-    const comptroller = await deploy('BoolComptroller');
-    return comptroller;
+    return await deploy('BoolComptroller');
   }
 
   if (kind == 'false-marker') {
@@ -28,7 +27,6 @@ async function makeComptroller(opts = {}) {
     const comptroller = await deploy('ComptrollerHarness');
     const priceOracle = opts.priceOracle || await makePriceOracle(opts.priceOracleOpts);
     const closeFactor = etherMantissa(dfn(opts.closeFactor, .051));
-    const maxAssets = etherUnsigned(dfn(opts.maxAssets, 10));
 
     await send(comptroller, '_setCloseFactor', [closeFactor]);
     await send(comptroller, '_setPriceOracle', [priceOracle._address]);
@@ -43,7 +41,6 @@ async function makeComptroller(opts = {}) {
     const comptroller = await deploy('ComptrollerHarness');
     const priceOracle = opts.priceOracle || await makePriceOracle(opts.priceOracleOpts);
     const closeFactor = etherMantissa(dfn(opts.closeFactor, .051));
-    const maxAssets = etherUnsigned(dfn(opts.maxAssets, 10));
     const liquidationIncentive = etherMantissa(1);
 
     await send(unitroller, '_setPendingImplementation', [comptroller._address]);

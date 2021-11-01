@@ -1232,7 +1232,7 @@ contract Comptroller is ComptrollerV3Storage, ComptrollerInterface, ComptrollerE
       * @param cToken The address of the market (token) to unlist
       * @return uint 0=success, otherwise a failure. (See enum Error for details)
       */
-    function _unsupportMarket(CToken cToken) external returns (uint) {
+    function _unsupportMarket(CToken cToken) internal returns (uint) {
         // Check admin rights
         if (!hasAdminRights()) return fail(Error.UNAUTHORIZED, FailureInfo.UNSUPPORT_MARKET_OWNER_CHECK);
 

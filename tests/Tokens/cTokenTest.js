@@ -37,7 +37,7 @@ describe('CToken', function () {
     let cToken;
 
     beforeEach(async () => {
-      cToken = await makeCToken({ name: "CToken Foo", symbol: "cFOO" });
+      cToken = await makeCToken({name: "CToken Foo", symbol: "cFOO"});
     });
 
     it('should return correct name', async () => {
@@ -55,7 +55,7 @@ describe('CToken', function () {
 
   describe('balanceOfUnderlying', () => {
     it("has an underlying balance", async () => {
-      const cToken = await makeCToken({ supportMarket: true });
+      const cToken = await makeCToken({supportMarket: true});
       await send(cToken, 'harnessSetBalance', [root, 100]);
       expect(await call(cToken, 'balanceOfUnderlying', [root])).toEqualNumber(20);
     });
