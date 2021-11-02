@@ -68,8 +68,11 @@ async function makeCToken(opts = {}) {
   const name = opts.name || `CToken ${symbol}`;
   const admin = opts.admin || root;
 
-  let cToken, underlying;
+  let cToken, underlying, fuseFeeDistributor;
   let cDelegator, cDelegatee, cDaiMaker;
+
+  fuseFeeDistributor = await deploy('FuseFeeDistributor');
+  console.log('fuse fee distributor', fuseFeeDistributor.address);
 
   switch (kind) {
     case 'cether':
@@ -128,7 +131,7 @@ async function makeCToken(opts = {}) {
                                    );
       cToken = await saddle.getContractAt('CErc20DelegateHarness', cDelegator._address); // XXXS at
       break;
-  }
+    }
 
   if (opts.supportMarket) {
     await send(comptroller, '_supportMarket', [cToken._address]);

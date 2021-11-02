@@ -11,6 +11,10 @@ function address(n) {
   return `0x${n.toString(16).padStart(40, '0')}`;
 }
 
+function bigNumberify(num) {
+  return ethers.utils.bigNumberify(new BigNumber(num).toFixed());
+}
+
 function encodeParameters(types, values) {
   const abi = new ethers.utils.AbiCoder();
   return abi.encode(types, values);
@@ -130,6 +134,7 @@ async function sendFallback(contract, opts = {}) {
 
 module.exports = {
   address,
+  bigNumberify,
   encodeParameters,
   etherBalance,
   etherGasCost,
