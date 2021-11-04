@@ -26,6 +26,7 @@
     "solparse": "^2.2.8"
   },
   "dependencies": {
+    "@babel/core": "^7.0.0-0",
     "eth-saddle": "^0.1.17",
     "hardhat": "^2.6.4"
   },
