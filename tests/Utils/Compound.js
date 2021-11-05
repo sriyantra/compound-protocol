@@ -71,9 +71,8 @@ async function makeCToken(opts = {}) {
   let cToken, underlying, fuseFeeDistributor;
   let cDelegator, cDelegatee, cDaiMaker;
 
-  //fuseFeeDistributor = await deploy('FuseFeeDistributor');
-  //console.log('fuse fee distributor', fuseFeeDistributor.address);
-
+  fuseFeeDistributor = await deploy('FuseFeeDistributor');
+  
   switch (kind) {
     case 'cether':
       cDelegatee = await deploy('CEtherDelegateHarness');
