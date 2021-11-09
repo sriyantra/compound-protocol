@@ -58,6 +58,23 @@ contract CErc20DelegateHarness is CErc20Delegate {
         return borrowRateMaxMantissa;
     }
 
+    function harnessSetFuseAdmin(address payable fuseFeeDistributorAddress) public {
+        fuseAdmin = FuseFeeDistributor(fuseFeeDistributorAddress);
+    }
+    
+    function harnessInitWhitelist(address cDelegatee) public {
+        address[] memory oldImplementations;
+        address[] memory newImplementations;
+        bool[] memory allowResign;
+        bool[] memory statuses;
+
+        oldImplementations[0] = 0x0000000000000000000000000000000000000000;
+        newImplementations[0] = cDelegatee;
+        allowResign[0] = true;
+        statuses[0] = true;
+        fuseAdmin._editCErc20DelegateWhitelist(oldImplementations, newImplementations, allowResign, statuses);
+    }
+
     function harnessSetBlockNumber(uint newBlockNumber) public {
         blockNumber = newBlockNumber;
     }

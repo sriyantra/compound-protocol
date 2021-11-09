@@ -13,5 +13,6 @@ interface IFuseFeeDistributor {
     function latestCEtherDelegate(address oldImplementation) external view returns (address cEtherDelegate, bool allowResign, bytes memory becomeImplementationData);
     function deployCEther(bytes calldata constructorData) external returns (address);
     function deployCErc20(bytes calldata constructorData) external returns (address);
+    function _editCErc20DelegateWhitelist(address[] calldata oldImplementations, address[] calldata newImplementations, bool[] calldata allowResign, bool[] calldata statuses) external;
     function () external payable;
 }

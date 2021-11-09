@@ -12,6 +12,7 @@ contract CTokenAdminStorage {
      */
     //IFuseFeeDistributor internal constant fuseAdmin = IFuseFeeDistributor(0xa731585ab05fC9f83555cf9Bff8F58ee94e18F85);
     FuseFeeDistributor public fuseAdmin;
+    //IFuseFeeDistributor internal constant fuseAdmin = IFuseFeeDistributor(0x4a8bF0809841CaEC07c469C045EbAA883CddA06A); // static address for testing
 
     /**
      * @dev LEGACY USE ONLY: Administrator for this contract
