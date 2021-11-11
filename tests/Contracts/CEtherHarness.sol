@@ -136,7 +136,7 @@ contract CEtherDelegateHarness is CEtherDelegate {
     }
 
     function harnessSetFuseFeeFresh(uint newFuseFeeMantissa) public returns (uint) {
-        return _setFuseFeeFresh(newFuseFeeMantissa);
+        return 0; //_setFuseFeeFresh(newFuseFeeMantissa);
     }
 
     function harnessWithdrawAdminFeesFresh(uint amount) public returns (uint) {
