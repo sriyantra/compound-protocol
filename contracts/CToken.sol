@@ -21,58 +21,6 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
         ComptrollerV3Storage comptrollerStorage = ComptrollerV3Storage(address(comptroller));
         return (msg.sender == comptrollerStorage.admin() && comptrollerStorage.adminHasRights()) || (msg.sender == address(fuseAdmin) && comptrollerStorage.fuseAdminHasRights());
     }
-
-    /**
-     * @notice Initialize the money market
-     * @param comptroller_ The address of the Comptroller
-     * @param interestRateModel_ The address of the interest rate model
-     * @param initialExchangeRateMantissa_ The initial exchange rate, scaled by 1e18
-     * @param name_ EIP-20 name of this token
-     * @param symbol_ EIP-20 symbol of this token
-     * @param decimals_ EIP-20 decimal precision of this token
-     */
-    function initialize(ComptrollerInterface comptroller_,
-                        InterestRateModel interestRateModel_,
-                        uint initialExchangeRateMantissa_,
-                        string memory name_,
-                        string memory symbol_,
-                        uint8 decimals_,
-                        uint256 reserveFactorMantissa_,
-                        uint256 adminFeeMantissa_) public {
-        require(msg.sender == address(fuseAdmin), "only Fuse admin may initialize the market");
-        require(accrualBlockNumber == 0 && borrowIndex == 0, "market may only be initialized once");
-
-        // Set initial exchange rate
-        initialExchangeRateMantissa = initialExchangeRateMantissa_;
-        require(initialExchangeRateMantissa > 0, "initial exchange rate must be greater than zero.");
-
-        // Set the comptroller
-        uint err = _setComptroller(comptroller_);
-        require(err == uint(Error.NO_ERROR), "setting comptroller failed");
-
-        // Initialize block number and borrow index (block number mocks depend on comptroller being set)
-        accrualBlockNumber = getBlockNumber();
-        borrowIndex = mantissaOne;
-
-        // Set the interest rate model (depends on block number / borrow index)
-        err = _setInterestRateModelFresh(interestRateModel_);
-        require(err == uint(Error.NO_ERROR), "setting interest rate model failed");
-
-        name = name_;
-        symbol = symbol_;
-        decimals = decimals_;
-
-        // Set reserve factor
-        err = _setReserveFactorFresh(reserveFactorMantissa_);
-        require(err == uint(Error.NO_ERROR), "setting reserve factor failed");
-
-        // Set admin fee
-        err = _setAdminFeeFresh(adminFeeMantissa_);
-        require(err == uint(Error.NO_ERROR), "setting admin fee failed");
-
-        // The counter starts true to prevent changing it from zero to non-zero (i.e. smaller cost/refund)
-        _notEntered = true;
-    }
     
     /**
      * @dev Returns latest pending Fuse fee (to be set with `_setFuseFeeFresh`)
@@ -217,7 +165,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
     function balanceOfUnderlying(address owner) external returns (uint) {
         Exp memory exchangeRate = Exp({mantissa: exchangeRateCurrent()});
         (MathError mErr, uint balance) = mulScalarTruncate(exchangeRate, accountTokens[owner]);
-        require(mErr == MathError.NO_ERROR, "balance could not be calculated");
+        require(mErr == MathError.NO_ERROR, "bal");
         return balance;
     }
 
@@ -276,7 +224,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
      * @return The total borrows with interest
      */
     function totalBorrowsCurrent() external nonReentrant(false) returns (uint) {
-        require(accrueInterest() == uint(Error.NO_ERROR), "accrue interest failed");
+        require(accrueInterest() == uint(Error.NO_ERROR), "acc");
         return totalBorrows;
     }
 
@@ -286,7 +234,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
      * @return The calculated balance
      */
     function borrowBalanceCurrent(address account) external nonReentrant(false) returns (uint) {
-        require(accrueInterest() == uint(Error.NO_ERROR), "accrue interest failed");
+        require(accrueInterest() == uint(Error.NO_ERROR), "acc");
         return borrowBalanceStored(account);
     }
 
@@ -297,7 +245,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
      */
     function borrowBalanceStored(address account) public view returns (uint) {
         (MathError err, uint result) = borrowBalanceStoredInternal(account);
-        require(err == MathError.NO_ERROR, "borrowBalanceStored: borrowBalanceStoredInternal failed");
+        require(err == MathError.NO_ERROR, "borrowBal");
         return result;
     }
 
@@ -343,7 +291,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
      * @return Calculated exchange rate scaled by 1e18
      */
     function exchangeRateCurrent() public nonReentrant(false) returns (uint) {
-        require(accrueInterest() == uint(Error.NO_ERROR), "accrue interest failed");
+        require(accrueInterest() == uint(Error.NO_ERROR), "acc");
         return exchangeRateStored();
     }
 
@@ -354,7 +302,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
      */
     function exchangeRateStored() public view returns (uint) {
         (MathError err, uint result) = exchangeRateStoredInternal();
-        require(err == MathError.NO_ERROR, "exchangeRateStored: exchangeRateStoredInternal failed");
+        require(err == MathError.NO_ERROR, "exRate");
         return result;
     }
 
@@ -422,11 +370,11 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
 
         /* Calculate the current borrow interest rate */
         uint borrowRateMantissa = interestRateModel.getBorrowRate(cashPrior, totalBorrows, add_(totalReserves, add_(totalAdminFees, totalFuseFees)));
-        require(borrowRateMantissa <= borrowRateMaxMantissa, "borrow rate is absurdly high");
+        require(borrowRateMantissa <= borrowRateMaxMantissa, "bor");
 
         /* Calculate the number of blocks elapsed since the last accrual */
         (MathError mathErr, uint blockDelta) = subUInt(currentBlockNumber, accrualBlockNumber);
-        require(mathErr == MathError.NO_ERROR, "could not calculate block delta");
+        require(mathErr == MathError.NO_ERROR, "sub");
 
         return finishInterestAccrual(currentBlockNumber, cashPrior, borrowRateMantissa, blockDelta);
     }
@@ -554,7 +502,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
          */
 
         (vars.mathErr, vars.mintTokens) = divScalarByExpTruncate(vars.actualMintAmount, Exp({mantissa: vars.exchangeRateMantissa}));
-        require(vars.mathErr == MathError.NO_ERROR, "MINT_EXCHANGE_CALCULATION_FAILED");
+        require(vars.mathErr == MathError.NO_ERROR, "MINT");
 
         /*
          * We calculate the new total supply of cTokens and minter token balance, checking for overflow:
@@ -630,7 +578,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
      * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
      */
     function redeemFresh(address payable redeemer, uint redeemTokensIn, uint redeemAmountIn) internal returns (uint) {
-        require(redeemTokensIn == 0 || redeemAmountIn == 0, "one of redeemTokensIn or redeemAmountIn must be zero");
+        require(redeemTokensIn == 0 || redeemAmountIn == 0, "redeem");
 
         RedeemLocalVars memory vars;
 
@@ -924,10 +872,10 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
          *  totalBorrowsNew = totalBorrows - actualRepayAmount
          */
         (vars.mathErr, vars.accountBorrowsNew) = subUInt(vars.accountBorrows, vars.actualRepayAmount);
-        require(vars.mathErr == MathError.NO_ERROR, "REPAY_BORROW_NEW_ACCOUNT_BORROW_BALANCE_CALCULATION_FAILED");
+        require(vars.mathErr == MathError.NO_ERROR, "REPAY");
 
         (vars.mathErr, vars.totalBorrowsNew) = subUInt(totalBorrows, vars.actualRepayAmount);
-        require(vars.mathErr == MathError.NO_ERROR, "REPAY_BORROW_NEW_TOTAL_BALANCE_CALCULATION_FAILED");
+        require(vars.mathErr == MathError.NO_ERROR, "REPAY");
 
         /* We write the previously calculated values into storage */
         accountBorrows[borrower].principal = vars.accountBorrowsNew;
@@ -1023,10 +971,10 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
 
         /* We calculate the number of collateral tokens that will be seized */
         (uint amountSeizeError, uint seizeTokens) = comptroller.liquidateCalculateSeizeTokens(address(this), address(cTokenCollateral), actualRepayAmount);
-        require(amountSeizeError == uint(Error.NO_ERROR), "LIQUIDATE_COMPTROLLER_CALCULATE_AMOUNT_SEIZE_FAILED");
+        require(amountSeizeError == uint(Error.NO_ERROR), "LIQ");
 
         /* Revert if borrower collateral token balance < seizeTokens */
-        require(cTokenCollateral.balanceOf(borrower) >= seizeTokens, "LIQUIDATE_SEIZE_TOO_MUCH");
+        require(cTokenCollateral.balanceOf(borrower) >= seizeTokens, "LIQ");
 
         // If this is also the collateral, run seizeInternal to avoid re-entrancy, otherwise make an external call
         uint seizeError;
@@ -1037,7 +985,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
         }
 
         /* Revert if seize tokens fails (since we cannot be sure of side effects) */
-        require(seizeError == uint(Error.NO_ERROR), "token seizure failed");
+        require(seizeError == uint(Error.NO_ERROR), "seize");
 
         /* We emit a LiquidateBorrow event */
         emit LiquidateBorrow(liquidator, borrower, actualRepayAmount, address(cTokenCollateral), seizeTokens);
@@ -1112,7 +1060,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
         vars.liquidatorSeizeTokens = sub_(seizeTokens, vars.protocolSeizeTokens);
 
         (vars.mathErr, vars.exchangeRateMantissa) = exchangeRateStoredInternal();
-        require(vars.mathErr == MathError.NO_ERROR, "exchange rate math error");
+        require(vars.mathErr == MathError.NO_ERROR, "exRate");
 
         vars.protocolSeizeAmount = mul_ScalarTruncate(Exp({mantissa: vars.exchangeRateMantissa}), vars.protocolSeizeTokens);
 
@@ -1157,7 +1105,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
     function _setComptroller(ComptrollerInterface newComptroller) internal returns (uint) {
         ComptrollerInterface oldComptroller = comptroller;
         // Ensure invoke comptroller.isComptroller() returns true
-        require(newComptroller.isComptroller(), "marker method returned false");
+        require(newComptroller.isComptroller(), "marker");
 
         // Set market's comptroller to newComptroller
         comptroller = newComptroller;
@@ -1492,7 +1440,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
         oldInterestRateModel = interestRateModel;
 
         // Ensure invoke newInterestRateModel.isInterestRateModel() returns true
-        require(newInterestRateModel.isInterestRateModel(), "marker method returned false");
+        require(newInterestRateModel.isInterestRateModel(), "marker");
 
         // Set the interest rate model to newInterestRateModel
         interestRateModel = newInterestRateModel;
@@ -1518,7 +1466,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
      */
     function _setNameAndSymbol(string calldata _name, string calldata _symbol) external {
         // Check caller is admin
-        require(hasAdminRights(), "caller not admin");
+        require(hasAdminRights(), "!admin");
 
         // Set ERC20 name and symbol
         name = _name;

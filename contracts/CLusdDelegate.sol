@@ -102,7 +102,7 @@ contract CLusdDelegate is CErc20Delegate {
      * @param data The encoded arguments for becoming
      */
     function _becomeImplementation(bytes calldata data) external {
-        require(msg.sender == address(this) || hasAdminRights(), "only self or admin may call _becomeImplementation");
+        require(msg.sender == address(this) || hasAdminRights(), "admin");
 
         (address _bamm, address _lusdSwapper) = abi.decode(
             data,
@@ -114,7 +114,7 @@ contract CLusdDelegate is CErc20Delegate {
         lqty = BAMM.bonus();
         stabilityPool = BAMM.SP();
 
-        require(address(BAMM.LUSD()) == underlying, "mismatch underlying token");
+        require(address(BAMM.LUSD()) == underlying, "mismatch token");
 
         // Approve moving our LUSD into the BAMM rewards contract.
         EIP20Interface(underlying).approve(address(BAMM), uint256(-1));
@@ -207,7 +207,7 @@ contract CLusdDelegate is CErc20Delegate {
 
         // Perform the EIP-20 transfer in
         EIP20Interface token = EIP20Interface(underlying);
-        require(token.transferFrom(from, address(this), amount), "unexpected EIP-20 transfer in return");
+        require(token.transferFrom(from, address(this), amount), "send fail");
 
         // Deposit to BAMM
         // LUSD balance used to include any dust
@@ -249,7 +249,7 @@ contract CLusdDelegate is CErc20Delegate {
         updateSupplierIndex(to);
 
         EIP20Interface token = EIP20Interface(underlying);
-        require(token.transfer(to, amount), "unexpected EIP-20 transfer out return");
+        require(token.transfer(to, amount), "send fail");
     }
 
     /**
