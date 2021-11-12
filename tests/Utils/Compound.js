@@ -9,6 +9,19 @@ const {
 } = require('./Ethereum');
 const BigNumber = require('bignumber.js');
 
+async function makeFuseFeeDistributor(opts = {}) {
+  const {
+    root = saddle.account,
+    kind = 'default'
+  } = opts || {};
+
+  if (kind == 'default') {
+    const fuseAdmin = await deploy('FuseFeeDistributor');
+    await send(fuseAdmin, 'initialize', [etherUnsigned(1e17)]);
+    return fuseAdmin;
+  }
+}
+
 async function makeComptroller(opts = {}) {
   const {
     root = saddle.account,
@@ -16,7 +29,8 @@ async function makeComptroller(opts = {}) {
   } = opts || {};
 
   if (kind == 'bool') {
-    return await deploy('BoolComptroller');
+    var comp = await deploy('BoolComptroller');
+    return comp;
   }
 
   if (kind == 'false-marker') {
@@ -71,8 +85,6 @@ async function makeCToken(opts = {}) {
   let cToken, underlying, fuseFeeDistributor;
   let cDelegator, cDelegatee, cDaiMaker;
 
-  fuseFeeDistributor = await deploy('FuseFeeDistributor');
-  
   switch (kind) {
     case 'cether':
       cDelegatee = await deploy('CEtherDelegateHarness');
@@ -114,16 +126,9 @@ async function makeCToken(opts = {}) {
     case 'cerc20':
     default:
       underlying = opts.underlying || await makeToken(opts.underlyingOpts);
+      fuseFeeDistributor = await makeFuseFeeDistributor(opts.fuseFeeDistributorOpts);
       cDelegatee = await deploy('CErc20DelegateHarness');
-      console.log('fusefeedistributor address', fuseFeeDistributor._address);
-      //console.log('cdelegatee address', cDelegatee._address);
-      //await send(cDelegatee, 'harnessInitWhitelist', [cDelegatee.address]);
-      
-      await send(cDelegatee, 'harnessSetFuseAdmin', [fuseFeeDistributor._address]);
-      //await send('0x890Ed0816A73dC49846DbCBe07839B462A7A221d', '_editCErc20DelegateWhitelist', [['0x0000000000000000000000000000000000000000'], [cDelegatee._address], [true], [true]]);
-      //console.log('fuseAdmin min borrow eth');
-      //console.log(await call(fuseAdmin, '_minBorrowEth'));
-      //console.log('after harness set fuse admin', await call(cDelegatee, 'fuseAdmin'));
+      await send(fuseFeeDistributor, '_editCErc20DelegateWhitelist', [['0x0000000000000000000000000000000000000000'], [cDelegatee._address], [false], [true]]);
       cDelegator = await deploy('CErc20Delegator',
         [
           underlying._address,
@@ -134,13 +139,11 @@ async function makeCToken(opts = {}) {
           cDelegatee._address,
           "0x0",
           0,
-          0
+          0,
+          fuseFeeDistributor._address
         ]
                                    );
       cToken = await saddle.getContractAt('CErc20DelegateHarness', cDelegator._address); // XXXS at
-      //console.log('fusefeedistributor address', fuseFeeDistributor._address);
-      //await send(cToken, 'harnessSetFuseAdmin', [fuseFeeDistributor._address]);
-      console.log('check', await call(cToken, 'fuseAdmin'));
       break;
     }
 

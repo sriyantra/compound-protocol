@@ -27,16 +27,18 @@ contract CErc20Delegator is CDelegationStorage {
                 address implementation_,
                 bytes memory becomeImplementationData,
                 uint256 reserveFactorMantissa_,
-                uint256 adminFeeMantissa_) public {
+                uint256 adminFeeMantissa_,
+                address payable fuseFeeDistributor_) public {
         // First delegate gets to initialize the delegator (i.e. storage contract)
-        delegateTo(implementation_, abi.encodeWithSignature("initialize(address,address,address,string,string,uint256,uint256)",
+        delegateTo(implementation_, abi.encodeWithSignature("initialize(address,address,address,string,string,uint256,uint256,address)",
                                                             underlying_,
                                                             comptroller_,
                                                             interestRateModel_,
                                                             name_,
                                                             symbol_,
                                                             reserveFactorMantissa_,
-                                                            adminFeeMantissa_));
+                                                            adminFeeMantissa_,
+                                                            fuseFeeDistributor_));
 
         // New implementations always get set via the settor (post-initialize)
         delegateTo(implementation_, abi.encodeWithSignature("_setImplementationSafe(address,bool,bytes)", implementation_, false, becomeImplementationData));

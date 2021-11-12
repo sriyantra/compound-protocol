@@ -27,7 +27,9 @@ contract CErc20 is CToken, CErc20Interface {
                         string memory name_,
                         string memory symbol_,
                         uint256 reserveFactorMantissa_,
-                        uint256 adminFeeMantissa_) public {
+                        uint256 adminFeeMantissa_,
+                        address payable feeFuseDistributor) public {
+        fuseAdmin = IFuseFeeDistributor(feeFuseDistributor);
         // CToken initialize does the bulk of the work
         uint256 initialExchangeRateMantissa_ = 0.2e18;
         uint8 decimals_ = EIP20Interface(underlying_).decimals();

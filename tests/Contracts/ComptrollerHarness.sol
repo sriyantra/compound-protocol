@@ -79,6 +79,11 @@ contract BoolComptroller is ComptrollerInterface, ComptrollerV3Storage {
     uint noError = 0;
     uint opaqueError = noError + 11; // an arbitrary, opaque error code
 
+    address[] oldImplementations;
+    address[] newImplementations;
+    bool[] allowResign;
+    bool[] statuses;
+
     /*** Assets You Are In ***/
 
     function enterMarkets(address[] memory _cTokens) public returns (uint[] memory) {
@@ -282,6 +287,23 @@ contract BoolComptroller is ComptrollerInterface, ComptrollerV3Storage {
     }
 
     /**** Mock Settors ****/
+
+    function harnessSetFuseAdmin(address payable fuseFeeDistributorAddress) public {
+        //fuseAdmin = IFuseFeeDistributor(fuseFeeDistributorAddress);
+    }
+
+    function harnessInitWhitelist(address cDelegatee) public {
+        oldImplementations.push(address(0));
+        newImplementations.push(cDelegatee);
+        allowResign.push(false);
+        statuses.push(true);
+        fuseAdmin._editCErc20DelegateWhitelist(oldImplementations, newImplementations, allowResign, statuses);
+    }
+
+    function harnessWhitelistTest(address implementation, address implementation_) public view returns (bool) {
+        //return fuseAdmin.checkCErc20Whitelist(implementation, implementation_);
+        return fuseAdmin.cErc20DelegateWhitelist(implementation, implementation_, false);
+    }
 
     /*** Policy Hooks ***/
 

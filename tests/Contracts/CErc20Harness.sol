@@ -25,7 +25,8 @@ contract CErc20DelegatorScenario is CErc20Delegator {
     implementation_,
     becomeImplementationData,
     0,
-    0) public {}
+    0,
+    address(0)) public {}
 }
 
 contract CErc20DelegateHarness is CErc20Delegate {
@@ -35,7 +36,12 @@ contract CErc20DelegateHarness is CErc20Delegate {
     uint blockNumber = 100000;
     uint harnessExchangeRate;
     bool harnessExchangeRateStored;
-
+    /*
+    address[] oldImplementations;
+    address[] newImplementations;
+    bool[] allowResign;
+    bool[] statuses;
+    */
     mapping (address => bool) public failTransferToAddresses;
 
     function exchangeRateStoredInternal() internal view returns (MathError, uint) {
@@ -57,23 +63,15 @@ contract CErc20DelegateHarness is CErc20Delegate {
     function getBorrowRateMaxMantissa() public pure returns (uint) {
         return borrowRateMaxMantissa;
     }
-
-    function harnessSetFuseAdmin(address payable fuseFeeDistributorAddress) public {
-        fuseAdmin = FuseFeeDistributor(fuseFeeDistributorAddress);
-    }
-    
-    function harnessInitWhitelist(address cDelegatee) public {
-        address[] memory oldImplementations;
-        address[] memory newImplementations;
-        bool[] memory allowResign;
-        bool[] memory statuses;
-
-        oldImplementations[0] = 0x0000000000000000000000000000000000000000;
-        newImplementations[0] = cDelegatee;
-        allowResign[0] = true;
-        statuses[0] = true;
-        fuseAdmin._editCErc20DelegateWhitelist(oldImplementations, newImplementations, allowResign, statuses);
-    }
+    /*
+    function harnessInitWhitelist(address payable fuseFeeDistributor) public {
+        IFuseFeeDistributor fuseAdminInstance = IFuseFeeDistributor(fuseFeeDistributor);
+        oldImplementations.push(address(0));
+        newImplementations.push(address(this));
+        allowResign.push(false);
+        statuses.push(true);
+        fuseAdminInstance._editCErc20DelegateWhitelist(oldImplementations, newImplementations, allowResign, statuses);
+    }*/
 
     function harnessSetBlockNumber(uint newBlockNumber) public {
         blockNumber = newBlockNumber;
