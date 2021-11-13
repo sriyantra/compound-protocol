@@ -99,6 +99,9 @@ contract CLusdDelegate is CErc20Delegate {
 
     uint256 constant public PRECISION = 1e18;
 
+    /// @notice minimum swap amount for the lusdSwapper to perform a swap
+    uint256 public ethSwapMin;
+
     /**
      * @notice Container for SP staking rewards state
      * @member balance The balance of Lqty reward
@@ -133,13 +136,14 @@ contract CLusdDelegate is CErc20Delegate {
     function _becomeImplementation(bytes calldata data) external {
         require(msg.sender == address(this) || hasAdminRights(), "admin");
 
-        (address _bamm, address _lusdSwapper, uint256 _buffer) = abi.decode(
+        (address _bamm, address _lusdSwapper, uint256 _buffer, uint256 _ethSwapMin) = abi.decode(
             data,
-            (address, address, uint256)
+            (address, address, uint256, uint256)
         );
         BAMM = IBAMM(_bamm);
         lusdSwapper = ILUSDSwapper(_lusdSwapper);
         buffer = _buffer;
+        ethSwapMin = _ethSwapMin;
 
         lqty = BAMM.bonus(); // Set lqty to BAMM reward token
         stabilityPool = BAMM.SP();
@@ -303,11 +307,13 @@ contract CLusdDelegate is CErc20Delegate {
     function handleETH(uint256 lusdTotal) internal {
         uint256 ethTotal = stabilityPool.getDepositorETHGain(address(BAMM));
 
-        uint256 eth2usdPrice = BAMM.fetchPrice();
-        uint256 ethUsdValue = mul_(ethTotal, eth2usdPrice) / PRECISION;
+        if (ethTotal > ethSwapMin) {
+            uint256 eth2usdPrice = BAMM.fetchPrice();
+            uint256 ethUsdValue = mul_(ethTotal, eth2usdPrice) / PRECISION;
 
-        lusdSwapper.swapLUSD(ethUsdValue, ethTotal);
-        emit LusdSwap(address(lusdSwapper), ethUsdValue, ethTotal);
+            lusdSwapper.swapLUSD(ethUsdValue, ethTotal);
+            emit LusdSwap(address(lusdSwapper), ethUsdValue, ethTotal);
+        }
     }
 
     /*** Internal functions ***/
