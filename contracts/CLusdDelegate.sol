@@ -94,9 +94,8 @@ contract CLusdDelegate is CErc20Delegate {
      */
     address public lqty;
 
-    // TODO add a buffer
-    // /// @notice buffer is the target percentage of LUSD deposits to remaing outside stability pool
-    // uint256 public buffer = 5e16; // 5% buffer
+    /// @notice buffer is the target percentage of LUSD deposits to remaing outside stability pool
+    uint256 public buffer;
 
     uint256 constant public PRECISION = 1e18;
 
@@ -125,6 +124,8 @@ contract CLusdDelegate is CErc20Delegate {
      */
     mapping(address => uint256) public lqtyUserAccrued;
 
+    function receive() external payable {} // contract should be able to receive ETH
+    
     /**
      * @notice Delegate interface to become the implementation
      * @param data The encoded arguments for becoming
@@ -132,12 +133,13 @@ contract CLusdDelegate is CErc20Delegate {
     function _becomeImplementation(bytes calldata data) external {
         require(msg.sender == address(this) || hasAdminRights(), "admin");
 
-        (address _bamm, address _lusdSwapper) = abi.decode(
+        (address _bamm, address _lusdSwapper, uint256 _buffer) = abi.decode(
             data,
-            (address, address)
+            (address, address, uint256)
         );
         BAMM = IBAMM(_bamm);
         lusdSwapper = ILUSDSwapper(_lusdSwapper);
+        buffer = _buffer;
 
         lqty = BAMM.bonus(); // Set lqty to BAMM reward token
         stabilityPool = BAMM.SP();
@@ -176,8 +178,6 @@ contract CLusdDelegate is CErc20Delegate {
         return 0;
     }
 
-    // TODO read LQTY amount
-
     /*** CToken Overrides ***/
 
     /**
@@ -213,13 +213,13 @@ contract CLusdDelegate is CErc20Delegate {
         EIP20Interface token = EIP20Interface(underlying);
         uint256 heldSupply = token.balanceOf(address(this));
         
-        // proportional amount of BAMM LUSD held by this contract
-        uint256 depositedSupply = bammLusdValue() * BAMM.balanceOf(address(this)) / BAMM.totalSupply();
-        return heldSupply + depositedSupply;
+        return heldSupply + depositedSupply();
     }
 
-    function bammLusdValue() internal view returns (uint256) {
-        return stabilityPool.getCompoundedLUSDDeposit(address(BAMM));
+    // proportional amount of BAMM LUSD held by this contract
+    function depositedSupply() internal view returns (uint256) {
+        uint256 bammLusdValue = stabilityPool.getCompoundedLUSDDeposit(address(BAMM));
+        return bammLusdValue * BAMM.balanceOf(address(this)) / BAMM.totalSupply();
     }
 
     /**
@@ -240,9 +240,16 @@ contract CLusdDelegate is CErc20Delegate {
         EIP20Interface token = EIP20Interface(underlying);
         require(token.transferFrom(from, address(this), amount), "send fail");
 
-        // Deposit to BAMM
-        // LUSD balance used to include any dust
-        BAMM.deposit(token.balanceOf(address(this)));
+        uint256 heldBalance = token.balanceOf(address(this));
+
+        uint256 depositedBalance = depositedSupply();
+
+        uint256 targetHeld = mul_(add_(depositedBalance, heldBalance), buffer) / PRECISION;
+
+        if (heldBalance > targetHeld) {
+            // Deposit to BAMM
+            BAMM.deposit(sub_(heldBalance, targetHeld));
+        }
 
         updateSPSupplyIndex();
         updateSupplierIndex(from);
@@ -263,23 +270,30 @@ contract CLusdDelegate is CErc20Delegate {
     ) internal {
         isNative; // unused
 
-        uint256 totalSupply = BAMM.totalSupply();
-        uint256 lusdValue = bammLusdValue();
-        uint256 shares = amount * totalSupply / lusdValue;
+        EIP20Interface token = EIP20Interface(underlying);
 
-        // Swap surplus BAMM ETH out for LUSD
-        handleETH(lusdValue);
+        uint256 heldBalance = token.balanceOf(address(this));
 
-        // Withdraw the LUSD from BAMM
-        BAMM.withdraw(shares);
+        if (amount > heldBalance) {
+            uint256 lusdNeeded = amount - heldBalance;
 
-        // Send all held ETH to lusd swapper. Intentionally no failure check, because failure should not block withdrawal
-        address(lusdSwapper).call.value(address(this).balance)("");
+            uint256 totalSupply = BAMM.totalSupply();
+            uint256 lusdValue = stabilityPool.getCompoundedLUSDDeposit(address(BAMM));
+            uint256 shares = mul_(lusdNeeded, totalSupply) / lusdValue;
+
+            // Swap surplus BAMM ETH out for LUSD
+            handleETH(lusdValue);
+
+            // Withdraw the LUSD from BAMM
+            BAMM.withdraw(shares);
+
+            // Send all held ETH to lusd swapper. Intentionally no failure check, because failure should not block withdrawal
+            address(lusdSwapper).call.value(address(this).balance)("");
+        }
 
         updateSPSupplyIndex();
         updateSupplierIndex(to);
 
-        EIP20Interface token = EIP20Interface(underlying);
         require(token.transfer(to, amount), "send fail");
     }
 
@@ -292,11 +306,8 @@ contract CLusdDelegate is CErc20Delegate {
         uint256 eth2usdPrice = BAMM.fetchPrice();
         uint256 ethUsdValue = mul_(ethTotal, eth2usdPrice) / PRECISION;
 
-        // TODO make this logic more configurable
-        if (lusdTotal < ethUsdValue * 10000) {
-            lusdSwapper.swapLUSD(ethUsdValue, ethTotal);
-            emit LusdSwap(address(lusdSwapper), ethUsdValue, ethTotal);
-        }
+        lusdSwapper.swapLUSD(ethUsdValue, ethTotal);
+        emit LusdSwap(address(lusdSwapper), ethUsdValue, ethTotal);
     }
 
     /*** Internal functions ***/
