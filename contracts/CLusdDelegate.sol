@@ -124,7 +124,7 @@ contract CLusdDelegate is CErc20Delegate {
      */
     mapping(address => uint256) public lqtyUserAccrued;
 
-    function receive() external payable {} // contract should be able to receive ETH
+    function () external payable {} // contract should be able to receive ETH
     
     /**
      * @notice Delegate interface to become the implementation
