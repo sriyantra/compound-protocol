@@ -9,27 +9,36 @@ interface IBAMM {
 
     // Views
 
+    /// @notice returns ETH price scaled by 1e18
     function fetchPrice() external view returns (uint256);
 
+    /// @notice returns amount of ETH received for an LUSD swap
     function getSwapEthAmount(uint256 lusdQty) external view returns (uint256 ethAmount, uint256 feeEthAmount);
 
+    /// @notice LUSD token address
     function LUSD() external view returns (EIP20Interface);
 
+    /// @notice Liquity Stability Pool Address
     function SP() external view returns (IStabilityPool);
 
+    /// @notice BAMM shares held by user
     function balanceOf(address account) external view returns (uint256);
 
+    /// @notice total BAMM shares
     function totalSupply() external view returns (uint256);
 
-    // Reward token
+    /// @notice Reward token
     function bonus() external view returns (address);
 
     // Mutative Functions
 
+    /// @notice deposit LUSD for shares in BAMM
     function deposit(uint256 lusdAmount) external;
 
+    /// @notice withdraw shares  in BAMM for LUSD + ETH
     function withdraw(uint256 numShares) external;
 
+    /// @notice swap LUSD to ETH in BAMM
     function swap(uint256 lusdAmount, uint256 minEthReturn, address dest) external returns(uint256);
 }
 
@@ -48,8 +57,23 @@ interface ILUSDSwapper {
  * @title Rari's CLusd's Contract
  * @notice CToken which wraps LUSD B. Protocol deposit
  * @author Joey Santoro
+ *
+ * CLusdDelegate deposits unborrowed LUSD into the Liquity Stability pool via B. Protocol BAMM
+ * The BAMM compounds LUSD deposits by selling ETH into LUSD as the stability pool is utilized.
+ * Note that there can still be some ETH as the BAMM does not force convert all ETH.
+ * 
+ * Any existing ETH withdrawn from BAMM will be either:
+ *   1. Swapped for LUSD by lusdSwapper if > 0.01% of the pool value
+ *   2. Sent to lusdSwapper is < 0.01% of the pool value
+ *
+ * LQTY rewards accrue proportionally to depositors
  */
 contract CLusdDelegate is CErc20Delegate {
+
+    event ClaimRewards(address indexed user, uint256 lqtyAmount);
+
+    event LusdSwap(address indexed lusdSwapper, uint256 lusdAmount, uint256 minEthAmount);
+
     /**
      * @notice Liquity Stability Pool address
      */
@@ -69,6 +93,10 @@ contract CLusdDelegate is CErc20Delegate {
      * @notice Lqty token address
      */
     address public lqty;
+
+    // TODO add a buffer
+    // /// @notice buffer is the target percentage of LUSD deposits to remaing outside stability pool
+    // uint256 public buffer = 5e16; // 5% buffer
 
     uint256 constant public PRECISION = 1e18;
 
@@ -111,7 +139,7 @@ contract CLusdDelegate is CErc20Delegate {
         BAMM = IBAMM(_bamm);
         lusdSwapper = ILUSDSwapper(_lusdSwapper);
 
-        lqty = BAMM.bonus();
+        lqty = BAMM.bonus(); // Set lqty to BAMM reward token
         stabilityPool = BAMM.SP();
 
         require(address(BAMM.LUSD()) == underlying, "mismatch token");
@@ -142,10 +170,13 @@ contract CLusdDelegate is CErc20Delegate {
             // Clear user's Lqty accrued.
             lqtyUserAccrued[account] = 0;
 
+            emit ClaimRewards(account, userLqtyBalance);
             return userLqtyBalance;
         }
         return 0;
     }
+
+    // TODO read LQTY amount
 
     /*** CToken Overrides ***/
 
@@ -264,6 +295,7 @@ contract CLusdDelegate is CErc20Delegate {
         // TODO make this logic more configurable
         if (lusdTotal < ethUsdValue * 10000) {
             lusdSwapper.swapLUSD(ethUsdValue, ethTotal);
+            emit LusdSwap(address(lusdSwapper), ethUsdValue, ethTotal);
         }
     }
 
