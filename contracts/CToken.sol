@@ -23,6 +23,58 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
     }
     
     /**
+     * @notice Initialize the money market
+     * @param comptroller_ The address of the Comptroller
+     * @param interestRateModel_ The address of the interest rate model
+     * @param initialExchangeRateMantissa_ The initial exchange rate, scaled by 1e18
+     * @param name_ EIP-20 name of this token
+     * @param symbol_ EIP-20 symbol of this token
+     * @param decimals_ EIP-20 decimal precision of this token
+     */
+    function initialize(ComptrollerInterface comptroller_,
+                        InterestRateModel interestRateModel_,
+                        uint initialExchangeRateMantissa_,
+                        string memory name_,
+                        string memory symbol_,
+                        uint8 decimals_,
+                        uint256 reserveFactorMantissa_,
+                        uint256 adminFeeMantissa_) public {
+        require(msg.sender == address(fuseAdmin), "!admin");
+        require(accrualBlockNumber == 0 && borrowIndex == 0, "init");
+
+        // Set initial exchange rate
+        initialExchangeRateMantissa = initialExchangeRateMantissa_;
+        require(initialExchangeRateMantissa > 0, "zero rate");
+
+        // Set the comptroller
+        uint err = _setComptroller(comptroller_);
+        require(err == uint(Error.NO_ERROR), "comptroller");
+
+        // Initialize block number and borrow index (block number mocks depend on comptroller being set)
+        accrualBlockNumber = getBlockNumber();
+        borrowIndex = mantissaOne;
+
+        // Set the interest rate model (depends on block number / borrow index)
+        err = _setInterestRateModelFresh(interestRateModel_);
+        require(err == uint(Error.NO_ERROR), "irm");
+
+        name = name_;
+        symbol = symbol_;
+        decimals = decimals_;
+
+        // Set reserve factor
+        err = _setReserveFactorFresh(reserveFactorMantissa_);
+        require(err == uint(Error.NO_ERROR), "reserve factor");
+
+        // Set admin fee
+        err = _setAdminFeeFresh(adminFeeMantissa_);
+        require(err == uint(Error.NO_ERROR), "fee");
+
+        // The counter starts true to prevent changing it from zero to non-zero (i.e. smaller cost/refund)
+        _notEntered = true;
+    }
+
+    /**
      * @dev Returns latest pending Fuse fee (to be set with `_setFuseFeeFresh`)
      */
     function getPendingFuseFeeFromAdmin() internal view returns (uint) {

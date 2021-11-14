@@ -9,7 +9,25 @@ import "./CToken.sol";
  * @author Compound
  */
 contract CEther is CToken, CEtherInterface {
-
+    /**
+     * @notice Initialize the new money market
+     * @param comptroller_ The address of the Comptroller
+     * @param interestRateModel_ The address of the interest rate model
+     * @param name_ ERC-20 name of this token
+     * @param symbol_ ERC-20 symbol of this token
+     */
+    function initialize(ComptrollerInterface comptroller_,
+                        InterestRateModel interestRateModel_,
+                        string memory name_,
+                        string memory symbol_,
+                        uint256 reserveFactorMantissa_,
+                        uint256 adminFeeMantissa_) public {
+        // CToken initialize does the bulk of the work
+        uint256 initialExchangeRateMantissa_ = 0.2e18;
+        uint8 decimals_ = 18;
+        super.initialize(comptroller_, interestRateModel_, initialExchangeRateMantissa_, name_, symbol_, decimals_, reserveFactorMantissa_, adminFeeMantissa_);
+    }
+    
     /*** User Interface ***/
 
     /**
