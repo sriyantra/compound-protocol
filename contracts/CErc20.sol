@@ -113,6 +113,9 @@ contract CErc20 is CToken, CErc20Interface {
         (uint err,) = liquidateBorrowInternal(borrower, repayAmount, cTokenCollateral);
         return err;
     }
+
+    /*** Safe Token ***/
+
     /**
      * @notice Gets balance of this contract in terms of the underlying
      * @dev This excludes the value of the current message, if any

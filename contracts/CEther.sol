@@ -27,7 +27,7 @@ contract CEther is CToken, CEtherInterface {
         uint8 decimals_ = 18;
         super.initialize(comptroller_, interestRateModel_, initialExchangeRateMantissa_, name_, symbol_, decimals_, reserveFactorMantissa_, adminFeeMantissa_);
     }
-    
+
     /*** User Interface ***/
 
     /**

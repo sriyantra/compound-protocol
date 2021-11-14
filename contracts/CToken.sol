@@ -21,7 +21,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
         ComptrollerV3Storage comptrollerStorage = ComptrollerV3Storage(address(comptroller));
         return (msg.sender == comptrollerStorage.admin() && comptrollerStorage.adminHasRights()) || (msg.sender == address(fuseAdmin) && comptrollerStorage.fuseAdminHasRights());
     }
-    
+
     /**
      * @notice Initialize the money market
      * @param comptroller_ The address of the Comptroller
@@ -73,7 +73,7 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
         // The counter starts true to prevent changing it from zero to non-zero (i.e. smaller cost/refund)
         _notEntered = true;
     }
-
+    
     /**
      * @dev Returns latest pending Fuse fee (to be set with `_setFuseFeeFresh`)
      */
