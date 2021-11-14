@@ -102,31 +102,6 @@ contract CLusdDelegate is CErc20Delegate {
     /// @notice minimum swap amount for the lusdSwapper to perform a swap
     uint256 public ethSwapMin;
 
-    /**
-     * @notice Container for SP staking rewards state
-     * @member balance The balance of Lqty reward
-     * @member index The last updated index
-     */
-    struct SPRewardState {
-        uint256 balance;
-        uint256 index;
-    }
-
-    /**
-     * @notice The state of SP supply
-     */
-    SPRewardState public spSupplyState;
-
-    /**
-     * @notice The index of every SP supplier
-     */
-    mapping(address => uint256) public spSupplierIndex;
-
-    /**
-     * @notice The Lqty amount of every user
-     */
-    mapping(address => uint256) public lqtyUserAccrued;
-
     function () external payable {} // contract should be able to receive ETH
     
     /**
@@ -136,12 +111,13 @@ contract CLusdDelegate is CErc20Delegate {
     function _becomeImplementation(bytes calldata data) external {
         require(msg.sender == address(this) || hasAdminRights(), "admin");
 
-        (address _bamm, address _lusdSwapper, uint256 _buffer, uint256 _ethSwapMin) = abi.decode(
+        (address _bamm, address _lusdSwapper, uint256 _buffer, uint256 _ethSwapMin, address _rewardsDistributor) = abi.decode(
             data,
-            (address, address, uint256, uint256)
+            (address, address, uint256, uint256, address)
         );
         BAMM = IBAMM(_bamm);
         lusdSwapper = ILUSDSwapper(_lusdSwapper);
+
         buffer = _buffer;
         ethSwapMin = _ethSwapMin;
 
@@ -152,60 +128,12 @@ contract CLusdDelegate is CErc20Delegate {
 
         // Approve moving our LUSD into the BAMM rewards contract.
         EIP20Interface(underlying).approve(address(BAMM), uint256(-1));
-    }
 
-    /**
-     * @notice Manually claim staking rewards by user
-     * @return The amount of Lqty rewards user claims
-     */
-    function claimLqty(address account) public returns (uint256) {
-        claimReward();
-
-        updateSPSupplyIndex();
-        updateSupplierIndex(account);
-
-        // Get user's Lqty accrued
-        uint256 userLqtyBalance = lqtyUserAccrued[account];
-
-        if (userLqtyBalance > 0) {
-            // Subtract user Lqty amount from spSupplyState
-            spSupplyState.balance = sub_(spSupplyState.balance, userLqtyBalance);
-
-            EIP20Interface(lqty).transfer(account, userLqtyBalance);
-            
-            // Clear user's Lqty accrued.
-            lqtyUserAccrued[account] = 0;
-
-            emit ClaimRewards(account, userLqtyBalance);
-            return userLqtyBalance;
-        }
-        return 0;
+        // Approve rewards distributor to pull LQTY
+        EIP20Interface(lqty).approve(address(_rewardsDistributor), uint256(-1));
     }
 
     /*** CToken Overrides ***/
-
-    /**
-     * @notice Transfer `tokens` tokens from `src` to `dst` by `spender`
-     * @param spender The address of the account performing the transfer
-     * @param src The address of the source account
-     * @param dst The address of the destination account
-     * @param tokens The number of tokens to transfer
-     * @return Whether or not the transfer succeeded
-     */
-    function transferTokens(
-        address spender,
-        address src,
-        address dst,
-        uint256 tokens
-    ) internal returns (uint256) {
-        claimReward();
-
-        updateSPSupplyIndex();
-        updateSupplierIndex(src);
-        updateSupplierIndex(dst);
-
-        return super.transferTokens(spender, src, dst, tokens);
-    }
 
     /*** Safe Token ***/
 
@@ -251,9 +179,6 @@ contract CLusdDelegate is CErc20Delegate {
             BAMM.deposit(sub_(heldBalance, targetHeld));
         }
 
-        updateSPSupplyIndex();
-        updateSupplierIndex(from);
-
         return amount;
     }
 
@@ -285,10 +210,10 @@ contract CLusdDelegate is CErc20Delegate {
 
             // Send all held ETH to lusd swapper. Intentionally no failure check, because failure should not block withdrawal
             address(lusdSwapper).call.value(address(this).balance)("");
+        } else {
+            BAMM.withdraw(0); // Claim LQTY
+            // TODO: should claims happen on transfer or supply?
         }
-
-        updateSPSupplyIndex();
-        updateSupplierIndex(to);
 
         require(token.transfer(to, amount), "send fail");
     }
@@ -306,40 +231,5 @@ contract CLusdDelegate is CErc20Delegate {
             lusdSwapper.swapLUSD(ethUsdValue, ethTotal);
             emit LusdSwap(address(lusdSwapper), ethUsdValue, ethTotal);
         }
-    }
-
-    /*** Internal functions ***/
-
-    function claimReward() internal {
-        // Withdrawing 0 claims all LQTY rewards without affecting additional state
-        BAMM.withdraw(0);
-    }
-
-    function updateSPSupplyIndex() internal {
-        uint256 lqtyBalance = lqtyBalance();
-        uint256 lqtyAccrued = sub_(lqtyBalance, spSupplyState.balance);
-        uint256 supplyTokens = CToken(address(this)).totalSupply();
-        Double memory ratio = supplyTokens > 0 ? fraction(lqtyAccrued, supplyTokens) : Double({mantissa: 0});
-        Double memory index = add_(Double({mantissa: spSupplyState.index}), ratio);
-
-        // Update spSupplyState
-        spSupplyState.index = index.mantissa;
-        spSupplyState.balance = lqtyBalance;
-    }
-
-    function updateSupplierIndex(address supplier) internal {
-        Double memory supplyIndex = Double({mantissa: spSupplyState.index});
-        Double memory supplierIndex = Double({mantissa: spSupplierIndex[supplier]});
-        Double memory deltaIndex = sub_(supplyIndex, supplierIndex);
-        if (deltaIndex.mantissa > 0) {
-            uint256 supplierTokens = CToken(address(this)).balanceOf(supplier);
-            uint256 supplierDelta = mul_(supplierTokens, deltaIndex);
-            lqtyUserAccrued[supplier] = add_(lqtyUserAccrued[supplier], supplierDelta);
-            spSupplierIndex[supplier] = supplyIndex.mantissa;
-        }
-    }
-
-    function lqtyBalance() internal view returns (uint256) {
-        return EIP20Interface(lqty).balanceOf(address(this));
     }
 }
