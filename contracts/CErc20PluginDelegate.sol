@@ -85,9 +85,9 @@ contract CErc20PluginDelegate is CErc20Delegate {
     ) internal returns (uint256) {
         // Perform the EIP-20 transfer in
         EIP20Interface token = EIP20Interface(underlying);
-        require(token.transferFrom(from, address(bammRouter), amount), "send fail");
+        require(token.transferFrom(from, address(plugin), amount), "send fail");
 
-        bammRouter.deposit(amount);
+        plugin.deposit(amount);
         return amount;
     }
 
@@ -100,6 +100,6 @@ contract CErc20PluginDelegate is CErc20Delegate {
         address payable to,
         uint256 amount
     ) internal {
-        bammRouter.withdraw(to, amount);
+        plugin.withdraw(to, amount);
     }
 }
