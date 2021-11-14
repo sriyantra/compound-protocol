@@ -89,9 +89,4 @@ contract CErc20 is CToken, CErc20Interface {
         (uint err,) = liquidateBorrowInternal(borrower, repayAmount, cTokenCollateral);
         return err;
     }
-
-    /*** Safe Token ***/
-    function doTransferIn(address from, uint amount) internal returns (uint) {}
-
-    function doTransferOut(address payable to, uint amount) internal {}
 }

@@ -230,16 +230,12 @@ contract CLusdDelegate is CErc20Delegate {
      * @notice Transfer the underlying to this contract and sweep into rewards contract
      * @param from Address to transfer funds from
      * @param amount Amount of underlying to transfer
-     * @param isNative The amount is in native or not
      * @return The actual amount that is transferred
      */
     function doTransferIn(
         address from,
-        uint256 amount,
-        bool isNative
+        uint256 amount
     ) internal returns (uint256) {
-        isNative; // unused
-
         // Perform the EIP-20 transfer in
         EIP20Interface token = EIP20Interface(underlying);
         require(token.transferFrom(from, address(this), amount), "send fail");
@@ -265,15 +261,11 @@ contract CLusdDelegate is CErc20Delegate {
      * @notice Transfer the underlying from this contract, after sweeping out of master chef
      * @param to Address to transfer funds to
      * @param amount Amount of underlying to transfer
-     * @param isNative The amount is in native or not
      */
     function doTransferOut(
         address payable to,
-        uint256 amount,
-        bool isNative
+        uint256 amount
     ) internal {
-        isNative; // unused
-
         EIP20Interface token = EIP20Interface(underlying);
 
         uint256 heldBalance = token.balanceOf(address(this));
