@@ -14,7 +14,7 @@ async function main() {
   // await hre.run('compile');
 
   // Deploy CLusdDelegate
-  const CLusdDelegate = await hre.ethers.getContractFactory("CLusdDelegate");
+  const CLusdDelegate = await hre.ethers.getContractFactory("CErc20PluginDelegate");
 
   const cLusdDelegate = await CLusdDelegate.deploy();
   await cLusdDelegate.deployed();

@@ -8,6 +8,9 @@ import "./RewardsDistributorStorage.sol";
 /**
  * @title RewardsDistributorDelegate (COMP distribution logic extracted from `Comptroller`)
  * @author Compound
+ * 
+ * Instead of having a hardcoded compSpeed, the PluginRewardsDistributor incentivizes suppliers based on a plugin's rewards
+ * It pulls the actual accrued amounts from the cToken based on the plugin distribution.
  */
 contract PluginRewardsDistributorDelegate is RewardsDistributorDelegateStorageV1, ExponentialNoError {
     /// @dev Notice that this contract is a RewardsDistributor
