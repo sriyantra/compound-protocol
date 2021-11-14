@@ -1117,6 +1117,71 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
     }
 
     /**
+      * @notice accrues interest and sets a new admin fee for the protocol using _setAdminFeeFresh
+      * @dev Admin function to accrue interest and set a new admin fee
+      * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
+      */
+    function _setAdminFee(uint newAdminFeeMantissa) external nonReentrant(false) returns (uint) {
+        uint error = accrueInterest();
+        if (error != uint(Error.NO_ERROR)) {
+            // accrueInterest emits logs on errors, but on top of that we want to log the fact that an attempted admin fee change failed.
+            return fail(Error(error), FailureInfo.SET_ADMIN_FEE_ACCRUE_INTEREST_FAILED);
+        }
+        // _setAdminFeeFresh emits reserve-factor-specific logs on errors, so we don't need to.
+        return _setAdminFeeFresh(newAdminFeeMantissa);
+    }
+
+    /**
+      * @notice Sets a new admin fee for the protocol (*requires fresh interest accrual)
+      * @dev Admin function to set a new admin fee
+      * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
+      */
+    function _setAdminFeeFresh(uint newAdminFeeMantissa) internal returns (uint) {
+        // Verify market's block number equals current block number
+        if (accrualBlockNumber != getBlockNumber()) {
+            return fail(Error.MARKET_NOT_FRESH, FailureInfo.SET_ADMIN_FEE_FRESH_CHECK);
+        }
+
+        // Sanitize newAdminFeeMantissa
+        if (newAdminFeeMantissa == uint(-1)) newAdminFeeMantissa = adminFeeMantissa;
+
+        // Get latest Fuse fee
+        uint newFuseFeeMantissa = getPendingFuseFeeFromAdmin();
+
+        // Check reserveFactorMantissa + newAdminFeeMantissa + newFuseFeeMantissa ≤ reserveFactorPlusFeesMaxMantissa
+        if (add_(add_(reserveFactorMantissa, newAdminFeeMantissa), newFuseFeeMantissa) > reserveFactorPlusFeesMaxMantissa) {
+            return fail(Error.BAD_INPUT, FailureInfo.SET_ADMIN_FEE_BOUNDS_CHECK);
+        }
+
+        // If setting admin fee
+        if (adminFeeMantissa != newAdminFeeMantissa) {
+            // Check caller is admin
+            if (!hasAdminRights()) {
+                return fail(Error.UNAUTHORIZED, FailureInfo.SET_ADMIN_FEE_ADMIN_CHECK);
+            }
+
+            // Set admin fee
+            uint oldAdminFeeMantissa = adminFeeMantissa;
+            adminFeeMantissa = newAdminFeeMantissa;
+
+            // Emit event
+            emit NewAdminFee(oldAdminFeeMantissa, newAdminFeeMantissa);
+        }
+
+        // If setting Fuse fee
+        if (fuseFeeMantissa != newFuseFeeMantissa) {
+            // Set Fuse fee
+            uint oldFuseFeeMantissa = fuseFeeMantissa;
+            fuseFeeMantissa = newFuseFeeMantissa;
+
+            // Emit event
+            emit NewFuseFee(oldFuseFeeMantissa, newFuseFeeMantissa);
+        }
+
+        return uint(Error.NO_ERROR);
+    }
+
+    /**
       * @notice accrues interest and sets a new reserve factor for the protocol using _setReserveFactorFresh
       * @dev Admin function to accrue interest and set a new reserve factor
       * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
@@ -1275,6 +1340,62 @@ contract CToken is CTokenInterface, Exponential, TokenErrorReporter {
 
         // doTransferOut reverts if anything goes wrong, since we can't be sure if side effects occurred.
         doTransferOut(address(fuseAdmin), withdrawAmount);
+
+        return uint(Error.NO_ERROR);
+    }
+
+    /**
+     * @notice Accrues interest and reduces admin fees by transferring to admin
+     * @param withdrawAmount Amount of fees to withdraw
+     * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
+     */
+    function _withdrawAdminFees(uint withdrawAmount) external nonReentrant(false) returns (uint) {
+        uint error = accrueInterest();
+        if (error != uint(Error.NO_ERROR)) {
+            // accrueInterest emits logs on errors, but on top of that we want to log the fact that an attempted admin fee withdrawal failed.
+            return fail(Error(error), FailureInfo.WITHDRAW_ADMIN_FEES_ACCRUE_INTEREST_FAILED);
+        }
+        // _withdrawAdminFeesFresh emits reserve-reduction-specific logs on errors, so we don't need to.
+        return _withdrawAdminFeesFresh(withdrawAmount);
+    }
+
+    /**
+     * @notice Reduces admin fees by transferring to admin
+     * @dev Requires fresh interest accrual
+     * @param withdrawAmount Amount of fees to withdraw
+     * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
+     */
+    function _withdrawAdminFeesFresh(uint withdrawAmount) internal returns (uint) {
+        // totalAdminFees - reduceAmount
+        uint totalAdminFeesNew;
+
+        // We fail gracefully unless market's block number equals current block number
+        if (accrualBlockNumber != getBlockNumber()) {
+            return fail(Error.MARKET_NOT_FRESH, FailureInfo.WITHDRAW_ADMIN_FEES_FRESH_CHECK);
+        }
+
+        // Fail gracefully if protocol has insufficient underlying cash
+        if (getCashPrior() < withdrawAmount) {
+            return fail(Error.TOKEN_INSUFFICIENT_CASH, FailureInfo.WITHDRAW_ADMIN_FEES_CASH_NOT_AVAILABLE);
+        }
+
+        // Check withdrawAmount ≤ adminFees[n] (totalAdminFees)
+        if (withdrawAmount > totalAdminFees) {
+            return fail(Error.BAD_INPUT, FailureInfo.WITHDRAW_ADMIN_FEES_VALIDATION);
+        }
+
+        /////////////////////////
+        // EFFECTS & INTERACTIONS
+        // (No safe failures beyond this point)
+
+        // We checked withdrawAmount <= totalAdminFees above, so this should never revert.
+        totalAdminFeesNew = sub_(totalAdminFees, withdrawAmount);
+
+        // Store adminFees[n+1] = adminFees[n] - withdrawAmount
+        totalAdminFees = totalAdminFeesNew;
+
+        // doTransferOut reverts if anything goes wrong, since we can't be sure if side effects occurred.
+        doTransferOut(address(uint160(UnitrollerAdminStorage(address(comptroller)).admin())), withdrawAmount);
 
         return uint(Error.NO_ERROR);
     }
