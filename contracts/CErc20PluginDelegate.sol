@@ -3,26 +3,7 @@ pragma experimental ABIEncoderV2;
 
 import "./CErc20Delegate.sol";
 import "./EIP20Interface.sol";
-
-interface IPlugin {
-
-    // Views
-    function rewardToken() external view returns(address);
-
-    /// @notice amount of underlying token deposited
-    function getCash() external view returns(uint256);
-
-    // Mutative Functions
-
-    /// @notice deposit underlying in plugin
-    function deposit(uint256 lusdAmount) external;
-
-    /// @notice withdraw underlying from plugin
-    function withdraw(address payable to, uint256 lusdAmount) external;
-
-    /// @notice claim reward token
-    function claim() external;
-}
+import "./IPlugin.sol";
 
 /**
  * @title Rari's CErc20Plugin's Contract
@@ -53,11 +34,21 @@ contract CErc20PluginDelegate is CErc20Delegate {
             (address, address)
         );
 
+        IPlugin oldPlugin = plugin;
         plugin = IPlugin(_plugin);
+        if (address(oldPlugin) != address(0)) {
+            oldPlugin.transferPlugin(_plugin);
+        }
 
         // Approve rewards distributor to pull reward token
         if (_rewardsDistributor != address(0)) {
             EIP20Interface(plugin.rewardToken()).approve(address(_rewardsDistributor), uint256(-1));
+        }
+
+        EIP20Interface token = EIP20Interface(underlying);
+        uint256 balance = token.balanceOf(address(this));
+        if (balance > 0) {
+            token.transfer(_plugin, balance);
         }
     }
 
