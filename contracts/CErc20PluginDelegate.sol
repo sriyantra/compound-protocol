@@ -36,7 +36,7 @@ contract CErc20PluginDelegate is CErc20Delegate {
 
         IPlugin oldPlugin = plugin;
         plugin = IPlugin(_plugin);
-        if (address(oldPlugin) != address(0)) {
+        if (address(oldPlugin) != address(0) && address(oldPlugin) != _plugin) {
             oldPlugin.transferPlugin(_plugin);
         }
 
@@ -45,10 +45,9 @@ contract CErc20PluginDelegate is CErc20Delegate {
             EIP20Interface(plugin.rewardToken()).approve(address(_rewardsDistributor), uint256(-1));
         }
 
-        EIP20Interface token = EIP20Interface(underlying);
-        uint256 balance = token.balanceOf(address(this));
-        if (balance > 0) {
-            token.transfer(_plugin, balance);
+        uint256 balance = EIP20Interface(underlying).balanceOf(address(this));
+        if (balance != 0) {
+            EIP20Interface(underlying).transfer(_plugin, balance);
         }
     }
 
@@ -75,8 +74,7 @@ contract CErc20PluginDelegate is CErc20Delegate {
         uint256 amount
     ) internal returns (uint256) {
         // Perform the EIP-20 transfer in
-        EIP20Interface token = EIP20Interface(underlying);
-        require(token.transferFrom(from, address(plugin), amount), "send fail");
+        require(EIP20Interface(underlying).transferFrom(from, address(plugin), amount), "send fail");
 
         plugin.deposit(amount);
         return amount;
