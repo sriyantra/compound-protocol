@@ -325,8 +325,9 @@ contract FuseFeeDistributor /*is Initializable, OwnableUpgradeable*/ {
      * @param comptroller The Unitroller (Comptroller proxy) address.
      * @param rate The proportion of Fuse pool interest taken as a protocol fee (scaled by 1e18).
      */
-    function _setCustomInterestFeeRate(address comptroller, int256 rate) external /*onlyOwner*/ {
+    function _setCustomInterestFeeRate(address comptroller, int256 rate) external returns (int) /*onlyOwner*/ {
         require(rate <= 1e18, "Interest fee rate cannot be more than 100%.");
         customInterestFeeRates[comptroller] = rate;
+        return rate;
     }
 }

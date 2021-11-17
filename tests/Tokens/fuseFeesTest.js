@@ -4,7 +4,7 @@ const {
   both
 } = require('../Utils/Ethereum');
 
-const {fastForward, makeCToken} = require('../Utils/Compound');
+const {fastForward, makeCToken, makeFuseFeeDistributor} = require('../Utils/Compound');
 
 const factor = etherMantissa(.02);
 
@@ -19,24 +19,25 @@ describe('CToken', function () {
   });
 
   describe('_setFuseFeeFresh', () => {
-    let cToken;
+    let cToken, fuseAdmin;
     beforeEach(async () => {
-      cToken = await makeCToken();
+      cToken = await makeCToken({supportMarket: true});
+      //await send(cToken, 'harnessSetFuseFeeFresh', [0]); // etherUnsigned(1e17)
     });
 
     it("rejects change if market not fresh", async () => {
       expect(await send(cToken, 'harnessFastForward', [5])).toSucceed();
-      expect(await send(cToken, 'harnessSetFuseFeeFresh', [factor])).toHaveTokenFailure('MARKET_NOT_FRESH', 'SET_FUSE_FEE_FRESH_CHECK');
+      expect(await send(cToken, 'harnessSetFuseFeeFresh', [factor])).toHaveTokenFailure('MARKET_NOT_FRESH', 'SET_ADMIN_FEE_FRESH_CHECK');
       expect(await call(cToken, 'fuseFeeMantissa')).toEqualNumber(0);
     });
 
     it("rejects newFuseFee that descales to 1", async () => {
-      expect(await send(cToken, 'harnessSetFuseFeeFresh', [etherMantissa(1.01)])).toHaveTokenFailure('BAD_INPUT', 'SET_FUSE_FEE_BOUNDS_CHECK');
+      await expect(send(cToken, 'harnessSetFuseFeeFresh', [etherMantissa(1.01)])).rejects.toRevert('revert Interest fee rate cannot be more than 100%.');
       expect(await call(cToken, 'fuseFeeMantissa')).toEqualNumber(0);
     });
 
     it("accepts newFuseFee in valid range and emits log", async () => {
-      const result = await send(cToken, 'harnessSetFuseFeeFresh', [factor])
+      const result = await send(cToken, 'harnessSetFuseFeeFresh', [factor]);
       expect(result).toSucceed();
       expect(await call(cToken, 'fuseFeeMantissa')).toEqualNumber(factor);
       expect(result).toHaveLog("NewFuseFee", {
@@ -61,36 +62,33 @@ describe('CToken', function () {
   describe('_setFuseFee', () => {
     let cToken;
     beforeEach(async () => {
-      cToken = await makeCToken();
+      cToken = await makeCToken({supportMarket: true});
     });
 
     beforeEach(async () => {
       await send(cToken.interestRateModel, 'setFailBorrowRate', [false]);
-      await send(cToken, 'setPendingFuseFee', [0])
-      await send(cToken, '_setFuseFee', []);
+      //await send(cToken, 'setPendingFuseFee', [0])
+      await send(cToken, 'harnessSetFuseFee', [0]);
     });
 
     it("emits a Fuse fee failure if interest accrual fails", async () => {
       await send(cToken.interestRateModel, 'setFailBorrowRate', [true]);
       await fastForward(cToken, 1);
       await send(cToken, 'setPendingFuseFee', [factor])
-      await expect(send(cToken, '_setFuseFee', [])).rejects.toRevert("revert INTEREST_RATE_MODEL_ERROR");
+      await expect(send(cToken, '_setAdminFee', [0])).rejects.toRevert("revert INTEREST_RATE_MODEL_ERROR");
       expect(await call(cToken, 'fuseFeeMantissa')).toEqualNumber(0);
     });
 
-    it("returns error from setFuseFeeFresh without emitting any extra logs", async () => {
-      await send(cToken, 'setPendingFuseFee', [etherMantissa(2)])
-      const {reply, receipt} = await both(cToken, '_setFuseFee', []);
-      expect(reply).toHaveTokenError('BAD_INPUT');
-      expect(receipt).toHaveTokenFailure('BAD_INPUT', 'SET_FUSE_FEE_BOUNDS_CHECK');
+    it("returns error from setFuseFeeFresh", async () => {
+      await expect(send(cToken, 'harnessSetFuseFeeFresh', [etherMantissa(2)])).rejects.toRevert("revert Interest fee rate cannot be more than 100%.");
       expect(await call(cToken, 'fuseFeeMantissa')).toEqualNumber(0);
     });
 
     it("returns success from setFuseFeeFresh", async () => {
       expect(await call(cToken, 'fuseFeeMantissa')).toEqualNumber(0);
       expect(await send(cToken, 'harnessFastForward', [5])).toSucceed();
-      await send(cToken, 'setPendingFuseFee', [factor])
-      expect(await send(cToken, '_setFuseFee', [])).toSucceed();
+      //await send(cToken, 'setPendingFuseFee', [factor])
+      expect(await send(cToken, 'harnessSetFuseFee', [factor])).toSucceed();
       expect(await call(cToken, 'fuseFeeMantissa')).toEqualNumber(factor);
     });
   });
@@ -134,7 +132,7 @@ describe('CToken', function () {
   describe("_withdrawFuseFees", () => {
     let cToken;
     beforeEach(async () => {
-      cToken = await makeCToken();
+      cToken = await makeCToken({supportMarket: true});
       await send(cToken.interestRateModel, 'setFailBorrowRate', [false]);
       expect(await send(cToken, 'harnessSetTotalFuseFees', [fuseFees])).toSucceed();
       expect(

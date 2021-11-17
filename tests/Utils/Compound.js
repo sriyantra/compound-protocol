@@ -17,7 +17,7 @@ async function makeFuseFeeDistributor(opts = {}) {
 
   if (kind == 'default') {
     const fuseAdmin = await deploy('FuseFeeDistributor');
-    await send(fuseAdmin, 'initialize', [etherUnsigned(1e17)]);
+    await send(fuseAdmin, 'initialize', [0]);
     return fuseAdmin;
   }
 }
@@ -29,8 +29,7 @@ async function makeComptroller(opts = {}) {
   } = opts || {};
 
   if (kind == 'bool') {
-    var comp = await deploy('BoolComptroller');
-    return comp;
+    return await deploy('BoolComptroller');
   }
 
   if (kind == 'false-marker') {

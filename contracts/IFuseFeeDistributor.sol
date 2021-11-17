@@ -14,5 +14,6 @@ interface IFuseFeeDistributor {
     function deployCEther(bytes calldata constructorData) external returns (address);
     function deployCErc20(bytes calldata constructorData) external returns (address);
     function _editCErc20DelegateWhitelist(address[] calldata oldImplementations, address[] calldata newImplementations, bool[] calldata allowResign, bool[] calldata statuses) external;
+    function _setCustomInterestFeeRate(address comptroller, int256 rate) external returns (int);
     function () external payable;
 }
