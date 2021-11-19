@@ -22,7 +22,6 @@ describe('CToken', function () {
     let cToken, fuseAdmin;
     beforeEach(async () => {
       cToken = await makeCToken({supportMarket: true});
-      //await send(cToken, 'harnessSetFuseFeeFresh', [0]); // etherUnsigned(1e17)
     });
 
     it("rejects change if market not fresh", async () => {
@@ -122,9 +121,10 @@ describe('CToken', function () {
     });
 
     it("increases Fuse admin balance and reduces Fuse fees on success", async () => {
-      const balance = etherUnsigned(await call(cToken.underlying, 'balanceOf', ["0xa731585ab05fC9f83555cf9Bff8F58ee94e18F85"]));
+      let fuseAdmin = await call(cToken, 'fuseAdmin');
+      const balance = etherUnsigned(await call(cToken.underlying, 'balanceOf', [fuseAdmin]));
       expect(await send(cToken, 'harnessWithdrawFuseFeesFresh', [fuseFees])).toSucceed();
-      expect(await call(cToken.underlying, 'balanceOf', ["0xa731585ab05fC9f83555cf9Bff8F58ee94e18F85"])).toEqualNumber(balance.plus(fuseFees));
+      expect(await call(cToken.underlying, 'balanceOf', [fuseAdmin])).toEqualNumber(balance.plus(fuseFees));
       expect(await call(cToken, 'totalFuseFees')).toEqualNumber(0);
     });
   });

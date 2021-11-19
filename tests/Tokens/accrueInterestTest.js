@@ -42,42 +42,42 @@ describe('CToken', () => {
       await pretendBlock(cToken, blockNumber, 1);
       expect(await call(cToken, 'getBorrowRateMaxMantissa')).toEqualNumber(etherMantissa(0.000005)); // 0.0005% per block
       await setBorrowRate(cToken, 0.001e-2); // 0.0010% per block
-      await expect(send(cToken, 'accrueInterest')).rejects.toRevert("revert borrow rate is absurdly high");
+      await expect(send(cToken, 'accrueInterest')).rejects.toRevert('revert borrow rate is absurdly high');
     });
 
     it('fails if new borrow rate calculation fails', async () => {
       await pretendBlock(cToken, blockNumber, 1);
       await send(cToken.interestRateModel, 'setFailBorrowRate', [true]);
-      await expect(send(cToken, 'accrueInterest')).rejects.toRevert("revert INTEREST_RATE_MODEL_ERROR");
+      await expect(send(cToken, 'accrueInterest')).rejects.toRevert('revert INTEREST_RATE_MODEL_ERROR');
     });
 
     it('fails if simple interest factor calculation fails', async () => {
       await pretendBlock(cToken, blockNumber, 5e70);
-      await expect(send(cToken, 'accrueInterest')).rejects.toRevert("revert multiplication overflow");
+      await expect(send(cToken, 'accrueInterest')).rejects.toRevert('revert multiplication overflow');
     });
 
     it('fails if new borrow index calculation fails', async () => {
       await pretendBlock(cToken, blockNumber, 5e60);
-      await expect(send(cToken, 'accrueInterest')).rejects.toRevert("revert multiplication overflow");
+      await expect(send(cToken, 'accrueInterest')).rejects.toRevert('revert multiplication overflow');
     });
 
     it('fails if new borrow interest index calculation fails', async () => {
       await pretendBlock(cToken)
       await send(cToken, 'harnessSetBorrowIndex', [UInt256Max()]);
-      await expect(send(cToken, 'accrueInterest')).rejects.toRevert("revert multiplication overflow");
+      await expect(send(cToken, 'accrueInterest')).rejects.toRevert('revert multiplication overflow');
     });
 
     it('fails if interest accumulated calculation fails', async () => {
       await send(cToken, 'harnessExchangeRateDetails', [0, UInt256Max(), 0, 0, 0]);
       await pretendBlock(cToken)
-      await expect(send(cToken, 'accrueInterest')).rejects.toRevert("revert multiplication overflow");
+      await expect(send(cToken, 'accrueInterest')).rejects.toRevert('revert multiplication overflow');
     });
 
     it('fails if new total borrows calculation fails', async () => {
       await setBorrowRate(cToken, 1e-18);
       await pretendBlock(cToken)
       await send(cToken, 'harnessExchangeRateDetails', [0, UInt256Max(), 0, 0, 0]);
-      await expect(send(cToken, 'accrueInterest')).rejects.toRevert("revert addition overflow");
+      await expect(send(cToken, 'accrueInterest')).rejects.toRevert('revert addition overflow');
     });
 
     it('fails if interest accumulated for reserves calculation fails', async () => {
@@ -85,7 +85,7 @@ describe('CToken', () => {
       await send(cToken, 'harnessExchangeRateDetails', [0, etherUnsigned(1e30), UInt256Max(), 0, 0]);
       await send(cToken, 'harnessSetReserveFactorFresh', [etherUnsigned(1e10)]);
       await pretendBlock(cToken, blockNumber, 5e20)
-      await expect(send(cToken, 'accrueInterest')).rejects.toRevert("revert addition overflow");
+      await expect(send(cToken, 'accrueInterest')).rejects.toRevert('revert addition overflow');
     });
 
     it('fails if new total reserves calculation fails', async () => {
@@ -93,7 +93,7 @@ describe('CToken', () => {
       await send(cToken, 'harnessExchangeRateDetails', [0, etherUnsigned(1e56), UInt256Max(), 0, 0]);
       await send(cToken, 'harnessSetReserveFactorFresh', [etherUnsigned(1e17)]);
       await pretendBlock(cToken)
-      await expect(send(cToken, 'accrueInterest')).rejects.toRevert("revert addition overflow");
+      await expect(send(cToken, 'accrueInterest')).rejects.toRevert('revert addition overflow');
     });
 
     it('fails if interest accumulated for admin fees calculation fails', async () => {
@@ -101,7 +101,7 @@ describe('CToken', () => {
       await send(cToken, 'harnessExchangeRateDetails', [0, etherUnsigned(1e30), 0, -1, 0]);
       await send(cToken, 'harnessSetAdminFeeFresh', [etherUnsigned(1e10)]);
       await pretendBlock(cToken, blockNumber, 5e20)
-      await expect(send(cToken, 'accrueInterest')).rejects.toRevert("revert addition overflow");
+      await expect(send(cToken, 'accrueInterest')).rejects.toRevert('revert addition overflow');
     });
 
     it('fails if new total admin fees calculation fails', async () => {
@@ -109,7 +109,7 @@ describe('CToken', () => {
       await send(cToken, 'harnessExchangeRateDetails', [0, etherUnsigned(1e56), 0, -1, 0]);
       await send(cToken, 'harnessSetAdminFeeFresh', [etherUnsigned(1e17)]);
       await pretendBlock(cToken)
-      await expect(send(cToken, 'accrueInterest')).rejects.toRevert("revert addition overflow");
+      await expect(send(cToken, 'accrueInterest')).rejects.toRevert('revert addition overflow');
     });
 
     it('fails if interest accumulated for Fuse fees calculation fails', async () => {
@@ -117,7 +117,7 @@ describe('CToken', () => {
       await send(cToken, 'harnessExchangeRateDetails', [0, etherUnsigned(1e30), 0, 0, -1]);
       await send(cToken, 'harnessSetFuseFeeFresh', [etherUnsigned(1e10)]);
       await pretendBlock(cToken, blockNumber, 5e20)
-      expect(await send(cToken, 'accrueInterest')).toHaveTokenFailure('MATH_ERROR', 'ACCRUE_INTEREST_NEW_TOTAL_FUSE_FEES_CALCULATION_FAILED');
+      await expect(send(cToken, 'accrueInterest')).rejects.toRevert('revert addition overflow');
     });
 
     it('fails if new total Fuse fees calculation fails', async () => {
@@ -125,7 +125,7 @@ describe('CToken', () => {
       await send(cToken, 'harnessExchangeRateDetails', [0, etherUnsigned(1e56), 0, 0, -1]);
       await send(cToken, 'harnessSetFuseFeeFresh', [etherUnsigned(1e17)]);
       await pretendBlock(cToken)
-      expect(await send(cToken, 'accrueInterest')).toHaveTokenFailure('MATH_ERROR', 'ACCRUE_INTEREST_NEW_TOTAL_FUSE_FEES_CALCULATION_FAILED');
+      await expect(send(cToken, 'accrueInterest')).rejects.toRevert('revert addition overflow');
     });
 
     it('succeeds and saves updated values in storage on success', async () => {
@@ -137,7 +137,7 @@ describe('CToken', () => {
       const adminFee = 5e16;
       const fuseFee = 8e16;
 
-      await send(cToken, 'harnessExchangeRateDetails', [0, etherUnsigned(startingTotalBorrows), etherUnsigned(startingTotalReserves), 0, 0]);
+      await send(cToken, 'harnessExchangeRateDetails', [0, etherUnsigned(startingTotalBorrows), etherUnsigned(startingTotalReserves), etherUnsigned(startingTotalAdminFees), etherUnsigned(startingTotalFuseFees)]);
       await send(cToken, 'harnessSetReserveFactorFresh', [etherUnsigned(reserveFactor)]);
       await send(cToken, 'harnessSetAdminFeeFresh', [etherUnsigned(adminFee)]);
       await send(cToken, 'harnessSetFuseFeeFresh', [etherUnsigned(fuseFee)]);

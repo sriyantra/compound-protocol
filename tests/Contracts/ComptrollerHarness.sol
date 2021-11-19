@@ -53,8 +53,9 @@ contract ComptrollerBorked {
 }
 
 contract BoolComptroller is ComptrollerInterface, ComptrollerV3Storage {
-    constructor() public {
+    constructor(IFuseFeeDistributor _fuseAdmin) public {
         admin = msg.sender;
+        fuseAdmin = _fuseAdmin;
     }
 
     bool allowMint = true;

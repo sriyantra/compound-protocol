@@ -8,6 +8,7 @@ const {
   etherUnsigned
 } = require('./Ethereum');
 const BigNumber = require('bignumber.js');
+var fuseFeeDistributor;
 
 async function makeFuseFeeDistributor(opts = {}) {
   const {
@@ -29,7 +30,7 @@ async function makeComptroller(opts = {}) {
   } = opts || {};
 
   if (kind == 'bool') {
-    return await deploy('BoolComptroller');
+    return await deploy('BoolComptroller', [fuseFeeDistributor._address]);
   }
 
   if (kind == 'false-marker') {
@@ -73,6 +74,7 @@ async function makeCToken(opts = {}) {
     kind = 'cerc20'
   } = opts || {};
 
+  fuseFeeDistributor = await makeFuseFeeDistributor(opts.fuseFeeDistributorOpts);
   const comptroller = opts.comptroller || await makeComptroller(opts.comptrollerOpts);
   const interestRateModel = opts.interestRateModel || await makeInterestRateModel(opts.interestRateModelOpts);
   const exchangeRate = etherMantissa(dfn(opts.exchangeRate, 1));
@@ -81,7 +83,7 @@ async function makeCToken(opts = {}) {
   const name = opts.name || `CToken ${symbol}`;
   const admin = opts.admin || root;
 
-  let cToken, underlying, fuseFeeDistributor;
+  let cToken, underlying;
   let cDelegator, cDelegatee, cDaiMaker;
 
   switch (kind) {
@@ -125,7 +127,6 @@ async function makeCToken(opts = {}) {
     case 'cerc20':
     default:
       underlying = opts.underlying || await makeToken(opts.underlyingOpts);
-      fuseFeeDistributor = await makeFuseFeeDistributor(opts.fuseFeeDistributorOpts);
       cDelegatee = await deploy('CErc20DelegateHarness');
       await send(fuseFeeDistributor, '_editCErc20DelegateWhitelist', [['0x0000000000000000000000000000000000000000'], [cDelegatee._address], [false], [true]]);
       cDelegator = await deploy('CErc20Delegator',

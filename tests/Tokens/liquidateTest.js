@@ -296,7 +296,7 @@ describe('Comptroller', () => {
     // show the account is healthy
     expect(await call(comptroller, 'isDeprecated', [cTokenBorrow._address])).toEqual(false);
     expect(await call(comptroller, 'liquidateBorrowAllowed', [cTokenBorrow._address, cTokenCollat._address, liquidator, borrower, borrowAmount])).toHaveTrollError('INSUFFICIENT_SHORTFALL');
-    
+
     // show deprecating a market works
     expect(await send(comptroller, '_setCollateralFactor', [cTokenBorrow._address, 0])).toSucceed();
     expect(await send(comptroller, '_setBorrowPaused', [cTokenBorrow._address, true])).toSucceed();
@@ -309,6 +309,5 @@ describe('Comptroller', () => {
     
     // even if deprecated, cant over repay
     await expect(send(comptroller, 'liquidateBorrowAllowed', [cTokenBorrow._address, cTokenCollat._address, liquidator, borrower, borrowAmount * 2])).rejects.toRevert('revert Can not repay more than the total borrow');
-    
   });
 })
