@@ -279,8 +279,8 @@ describe('Comptroller', () => {
     let [root, liquidator, borrower] = saddle.accounts;
     let collatAmount = 10;
     let borrowAmount = 2;
-    const cTokenCollat = await makeCToken({supportMarket: true, collateralFactor: .5});
-    const cTokenBorrow = await makeCToken({supportMarket: true, comptroller: cTokenCollat.comptroller});
+    const cTokenCollat = await makeCToken({supportMarket: true, underlyingPrice: 1, collateralFactor: .5});
+    const cTokenBorrow = await makeCToken({supportMarket: true, underlyingPrice: 1, comptroller: cTokenCollat.comptroller});
     const comptroller = cTokenCollat.comptroller;
 
     // borrow some tokens

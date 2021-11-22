@@ -4,10 +4,16 @@ import "../../contracts/Comptroller.sol";
 import "../../contracts/PriceOracle.sol";
 
 contract ComptrollerHarness is Comptroller {
-    constructor() Comptroller() public {}
+    constructor(IFuseFeeDistributor _fuseAdmin) Comptroller() public {
+        fuseAdmin = _fuseAdmin;
+    }
 
     function setPauseGuardian(address harnessedPauseGuardian) public {
         pauseGuardian = harnessedPauseGuardian;
+    }
+
+    function setFuseAdmin(address payable fuseFeeDistributorAddress) public {
+        fuseAdmin = IFuseFeeDistributor(fuseFeeDistributorAddress);
     }
 }
 

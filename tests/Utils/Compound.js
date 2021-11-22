@@ -38,7 +38,7 @@ async function makeComptroller(opts = {}) {
   }
 
   if (kind == 'v1-no-proxy') {
-    const comptroller = await deploy('ComptrollerHarness');
+    const comptroller = await deploy('ComptrollerHarness', [fuseFeeDistributor._address]);
     const priceOracle = opts.priceOracle || await makePriceOracle(opts.priceOracleOpts);
     const closeFactor = etherMantissa(dfn(opts.closeFactor, .051));
 
@@ -46,13 +46,14 @@ async function makeComptroller(opts = {}) {
     await send(comptroller, '_setPriceOracle', [priceOracle._address]);
 
     comptroller.options.address = comptroller._address;
+    await send(comptroller, 'setFuseAdmin', [fuseFeeDistributor._address]);
 
     return Object.assign(comptroller, { priceOracle });
   }
 
   if (kind == 'unitroller-v1') {
     const unitroller = await deploy('Unitroller');
-    const comptroller = await deploy('ComptrollerHarness');
+    const comptroller = await deploy('ComptrollerHarness', [fuseFeeDistributor._address]);
     const priceOracle = opts.priceOracle || await makePriceOracle(opts.priceOracleOpts);
     const closeFactor = etherMantissa(dfn(opts.closeFactor, .051));
     const liquidationIncentive = etherMantissa(1);
@@ -63,7 +64,7 @@ async function makeComptroller(opts = {}) {
     await send(comptroller, '_setLiquidationIncentive', [liquidationIncentive]);
     await send(comptroller, '_setCloseFactor', [closeFactor]);
     await send(comptroller, '_setPriceOracle', [priceOracle._address]);
-
+    await send(comptroller, 'setFuseAdmin', [fuseFeeDistributor._address]);
     return Object.assign(comptroller, { priceOracle });
   }
 }
