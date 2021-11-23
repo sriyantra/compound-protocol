@@ -5,7 +5,8 @@ const {
   encodeParameters,
   etherBalance,
   etherMantissa,
-  etherUnsigned
+  etherUnsigned,
+  mergeInterface
 } = require('./Ethereum');
 const BigNumber = require('bignumber.js');
 var fuseFeeDistributor;
@@ -57,15 +58,20 @@ async function makeComptroller(opts = {}) {
     const priceOracle = opts.priceOracle || await makePriceOracle(opts.priceOracleOpts);
     const closeFactor = etherMantissa(dfn(opts.closeFactor, .051));
     const liquidationIncentive = etherMantissa(1);
+    const comp = opts.comp || await deploy('Comp', [opts.compOwner || root]);
+    const compRate = etherUnsigned(dfn(opts.compRate, 1e18));
 
     await send(unitroller, '_setPendingImplementation', [comptroller._address]);
     await send(comptroller, '_become', [unitroller._address]);
-    comptroller.options.address = unitroller._address;
-    await send(comptroller, '_setLiquidationIncentive', [liquidationIncentive]);
-    await send(comptroller, '_setCloseFactor', [closeFactor]);
-    await send(comptroller, '_setPriceOracle', [priceOracle._address]);
-    await send(comptroller, 'setFuseAdmin', [fuseFeeDistributor._address]);
-    return Object.assign(comptroller, { priceOracle });
+    mergeInterface(unitroller, comptroller);
+    //comptroller.options.address = unitroller._address;
+    await send(unitroller, '_setLiquidationIncentive', [liquidationIncentive]);
+    await send(unitroller, '_setCloseFactor', [closeFactor]);
+    await send(unitroller, '_setPriceOracle', [priceOracle._address]);
+    await send(unitroller, 'setFuseAdmin', [fuseFeeDistributor._address]);
+    await send(unitroller, 'setCompAddress', [comp._address]); // harness only
+
+    return Object.assign(unitroller, { priceOracle, comp });
   }
 }
 

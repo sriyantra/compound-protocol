@@ -4,9 +4,9 @@ import "../../contracts/Comptroller.sol";
 import "../../contracts/PriceOracle.sol";
 
 contract ComptrollerHarness is Comptroller {
-    constructor(IFuseFeeDistributor _fuseAdmin) Comptroller() public {
-        fuseAdmin = _fuseAdmin;
-    }
+    address compAddress;
+    uint public blockNumber;
+    constructor() Comptroller() public {}
 
     function setPauseGuardian(address harnessedPauseGuardian) public {
         pauseGuardian = harnessedPauseGuardian;
@@ -15,6 +15,37 @@ contract ComptrollerHarness is Comptroller {
     function setFuseAdmin(address payable fuseFeeDistributorAddress) public {
         fuseAdmin = IFuseFeeDistributor(fuseFeeDistributorAddress);
     }
+
+    function setCompAddress(address compAddress_) public {
+        compAddress = compAddress_;
+    }
+
+    function getCompAddress() public view returns (address) {
+        return compAddress;
+    }
+
+    function getBlockNumber() public view returns (uint) {
+        return blockNumber;
+    }
+
+    /*function getCompMarkets() public view returns (address[] memory) {
+        uint m = allMarkets.length;
+        uint n = 0;
+        for (uint i = 0; i < m; i++) {
+            if (compSupplySpeeds[address(allMarkets[i])] > 0 || compBorrowSpeeds[address(allMarkets[i])] > 0) {
+                n++;
+            }
+        }
+
+        address[] memory compMarkets = new address[](n);
+        uint k = 0;
+        for (uint i = 0; i < m; i++) {
+            if (compSupplySpeeds[address(allMarkets[i])] > 0 || compBorrowSpeeds[address(allMarkets[i])] > 0) {
+                compMarkets[k++] = address(allMarkets[i]);
+            }
+        }
+        return compMarkets;
+    }*/
 }
 
 contract ComptrollerScenario is Comptroller {
