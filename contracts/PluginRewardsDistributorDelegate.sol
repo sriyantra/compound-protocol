@@ -68,9 +68,6 @@ contract PluginRewardsDistributorDelegate is RewardsDistributorDelegateStorageV1
             comp.transferFrom(cToken, address(this), compAccrued_);
             uint supplyTokens = CToken(cToken).totalSupply();
             Double memory ratio = supplyTokens > 0 ? fraction(compAccrued_, supplyTokens) : Double({mantissa: 0});
-            if (supplyState.index == 0) {
-                initializeCompSupplyState(cToken);
-            }
             Double memory index = add_(Double({mantissa: supplyState.index}), ratio);
             compSupplyState[cToken] = CompMarketState({
                 index: safe224(index.mantissa, "new index exceeds 224 bits"),
@@ -79,7 +76,12 @@ contract PluginRewardsDistributorDelegate is RewardsDistributorDelegateStorageV1
         }
     }
 
-    function initializeCompSupplyState(address cToken) internal {
+    /**
+     * @notice Add market for initial rewards
+     * @param cToken The market to add
+     */
+    function _addMarketForRewards(address cToken) public {
+        require(msg.sender == admin, "only admin can set comp speed");
         compSupplyState[cToken] = CompMarketState({
             index: compInitialIndex,
             block: 0
