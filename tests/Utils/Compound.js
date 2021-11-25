@@ -24,11 +24,32 @@ async function makeFuseFeeDistributor(opts = {}) {
   }
 }
 
+async function makeRewardsDistributor(opts = {}) {
+  const {
+    root = saddle.account,
+    rewardToken
+  } = opts || {};
+
+  let rewardsDistributorDelegatee, rewardsDistributorDelegator;
+  rewardsDistributorDelegatee = await deploy('RewardsDistributorDelegate');
+  rewardsDistributorDelegator = await deploy('RewardsDistributorDelegator', 
+    [
+      root,
+      opts.rewardToken._address,
+      rewardsDistributorDelegatee._address,
+    ]);
+  return await saddle.getContractAt('RewardsDistributorDelegate', rewardsDistributorDelegator._address);
+}
+
 async function makeComptroller(opts = {}) {
   const {
     root = saddle.account,
     kind = 'unitroller-v1'
   } = opts || {};
+
+  if (!fuseFeeDistributor) {
+    fuseFeeDistributor = await makeFuseFeeDistributor(opts.fuseFeeDistributorOpts);
+  }
 
   if (kind == 'bool') {
     return await deploy('BoolComptroller', [fuseFeeDistributor._address]);
@@ -39,7 +60,7 @@ async function makeComptroller(opts = {}) {
   }
 
   if (kind == 'v1-no-proxy') {
-    const comptroller = await deploy('ComptrollerHarness', [fuseFeeDistributor._address]);
+    const comptroller = await deploy('ComptrollerHarness');
     const priceOracle = opts.priceOracle || await makePriceOracle(opts.priceOracleOpts);
     const closeFactor = etherMantissa(dfn(opts.closeFactor, .051));
 
@@ -54,7 +75,7 @@ async function makeComptroller(opts = {}) {
 
   if (kind == 'unitroller-v1') {
     const unitroller = await deploy('Unitroller');
-    const comptroller = await deploy('ComptrollerHarness', [fuseFeeDistributor._address]);
+    const comptroller = await deploy('ComptrollerHarness');
     const priceOracle = opts.priceOracle || await makePriceOracle(opts.priceOracleOpts);
     const closeFactor = etherMantissa(dfn(opts.closeFactor, .051));
     const liquidationIncentive = etherMantissa(1);
@@ -386,6 +407,8 @@ module.exports = {
   makeInterestRateModel,
   makePriceOracle,
   makeToken,
+  makeRewardsDistributor,
+  makeFuseFeeDistributor,
 
   balanceOf,
   totalSupply,

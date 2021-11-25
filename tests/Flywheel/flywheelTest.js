@@ -1,6 +1,7 @@
 const {
   makeComptroller,
   makeCToken,
+  makeRewardsDistributor,
   balanceOf,
   fastForward,
   pretendBorrow,

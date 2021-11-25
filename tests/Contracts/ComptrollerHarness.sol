@@ -28,11 +28,15 @@ contract ComptrollerHarness is Comptroller {
         return blockNumber;
     }
 
-    /*function getCompMarkets() public view returns (address[] memory) {
+    function getCompMarkets() public view returns (address[] memory) {
         uint m = allMarkets.length;
         uint n = 0;
+
+        //for (uint256 i = 0; i < rewardsDistributors.length; i++) RewardsDistributorDelegate(rewardsDistributors[i]).flywheelPreSupplierAction(cToken, supplier);
+        RewardsDistributorDelegate rdd = RewardsDistributorDelegate(rewardsDistributors[0]);
+
         for (uint i = 0; i < m; i++) {
-            if (compSupplySpeeds[address(allMarkets[i])] > 0 || compBorrowSpeeds[address(allMarkets[i])] > 0) {
+            if (rdd.compSupplySpeeds(address(allMarkets[i])) > 0 || rdd.compBorrowSpeeds(address(allMarkets[i])) > 0) {
                 n++;
             }
         }
@@ -40,12 +44,11 @@ contract ComptrollerHarness is Comptroller {
         address[] memory compMarkets = new address[](n);
         uint k = 0;
         for (uint i = 0; i < m; i++) {
-            if (compSupplySpeeds[address(allMarkets[i])] > 0 || compBorrowSpeeds[address(allMarkets[i])] > 0) {
+            if (rdd.compSupplySpeeds(address(allMarkets[i])) > 0 || rdd.compBorrowSpeeds(address(allMarkets[i])) > 0) {
                 compMarkets[k++] = address(allMarkets[i]);
             }
         }
-        return compMarkets;
-    }*/
+    }
 }
 
 contract ComptrollerScenario is Comptroller {

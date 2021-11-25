@@ -1,6 +1,7 @@
 const {
 makeComptroller,
 makeCToken,
+makeRewardsDistributor,
 balanceOf,
 fastForward,
 pretendBorrow,
@@ -31,94 +32,49 @@ async function totalCompAccrued(comptroller, user) {
 return (await compAccrued(comptroller, user)).plus(await compBalance(comptroller, user));
 }
 
-describe('Flywheel upgrade', () => {
-describe('becomes the comptroller', () => {
-    it('adds the comp markets', async () => {
-    let root = saddle.accounts[0];
-    let unitroller = await makeComptroller();
-    let compMarkets = await Promise.all([1, 2, 3].map(async _ => {
-        return makeCToken({comptroller: unitroller, supportMarket: true});
-    }));
-    compMarkets = compMarkets.map(c => c._address);
-    unitroller = await makeComptroller({compMarkets});
-    expect(await call(unitroller, 'getCompMarkets')).toEqual(compMarkets);
-    });
-
-    it('adds the other markets', async () => {
-    let root = saddle.accounts[0];
-    let unitroller = await makeComptroller({kind: 'unitroller-g2'});
-    let allMarkets = await Promise.all([1, 2, 3].map(async _ => {
-        return makeCToken({comptroller: unitroller, supportMarket: true});
-    }));
-    allMarkets = allMarkets.map(c => c._address);
-    unitroller = await makeComptroller({
-        kind: 'unitroller-g3',
-        unitroller,
-        compMarkets: allMarkets.slice(0, 1),
-        otherMarkets: allMarkets.slice(1)
-    });
-    expect(await call(unitroller, 'getAllMarkets')).toEqual(allMarkets);
-    expect(await call(unitroller, 'getCompMarkets')).toEqual(allMarkets.slice(0, 1));
-    });
-
-    it('_supportMarket() adds to all markets, and only once', async () => {
-    let root = saddle.accounts[0];
-    let unitroller = await makeComptroller({kind: 'unitroller-g3'});
-    let allMarkets = [];
-    for (let _ of Array(10)) {
-        allMarkets.push(await makeCToken({comptroller: unitroller, supportMarket: true}));
-    }
-    expect(await call(unitroller, 'getAllMarkets')).toEqual(allMarkets.map(c => c._address));
-    expect(
-        makeComptroller({
-        kind: 'unitroller-g3',
-        unitroller,
-        otherMarkets: [allMarkets[0]._address]
-        })
-    ).rejects.toRevert('revert market already added');
-    });
-});
-});
-
 describe('Flywheel', () => {
-let root, a1, a2, a3, accounts;
-let comptroller, cLOW, cREP, cZRX, cEVIL;
-beforeEach(async () => {
-    let interestRateModelOpts = {borrowRate: 0.000001};
-    [root, a1, a2, a3, ...accounts] = saddle.accounts;
-    comptroller = await makeComptroller();
-    cLOW = await makeCToken({comptroller, supportMarket: true, underlyingPrice: 1, interestRateModelOpts});
-    cREP = await makeCToken({comptroller, supportMarket: true, underlyingPrice: 2, interestRateModelOpts});
-    cZRX = await makeCToken({comptroller, supportMarket: true, underlyingPrice: 3, interestRateModelOpts});
-    cEVIL = await makeCToken({comptroller, supportMarket: false, underlyingPrice: 3, interestRateModelOpts});
-    cUSD = await makeCToken({comptroller, supportMarket: true, underlyingPrice: 1, collateralFactor: 0.5, interestRateModelOpts});
-});
-
-describe('_grantComp()', () => {
+    let root, a1, a2, a3, accounts;
+    let comptroller, rewardsDistributor, cLOW, cREP, cZRX, cEVIL;
     beforeEach(async () => {
-    await send(comptroller.comp, 'transfer', [comptroller._address, etherUnsigned(50e18)], {from: root});
+        let interestRateModelOpts = {borrowRate: 0.000001};
+        [root, a1, a2, a3, ...accounts] = saddle.accounts;
+        comptroller = await makeComptroller();
+        rewardsDistributor = await makeRewardsDistributor({rewardToken: comptroller.comp});
+        //console.log('rewards distributor');
+        //console.log(rewardsDistributor._address);
+        //console.log(rewardsDistributor);
+        cLOW = await makeCToken({comptroller, supportMarket: true, underlyingPrice: 1, interestRateModelOpts});
+        cREP = await makeCToken({comptroller, supportMarket: true, underlyingPrice: 2, interestRateModelOpts});
+        cZRX = await makeCToken({comptroller, supportMarket: true, underlyingPrice: 3, interestRateModelOpts});
+        cEVIL = await makeCToken({comptroller, supportMarket: false, underlyingPrice: 3, interestRateModelOpts});
+        cUSD = await makeCToken({comptroller, supportMarket: true, underlyingPrice: 1, collateralFactor: 0.5, interestRateModelOpts});
     });
 
-    it('should award comp if called by admin', async () => {
-    const tx = await send(comptroller, '_grantComp', [a1, 100]);
-    expect(tx).toHaveLog('CompGranted', {
-        recipient: a1,
-        amount: 100
-    });
-    });
+    describe('_grantComp()', () => {
+        beforeEach(async () => {
+            await send(comptroller.comp, 'transfer', [rewardsDistributor._address, etherUnsigned(50e18)], {from: root});
+        });
 
-    it('should revert if not called by admin', async () => {
-    await expect(
-        send(comptroller, '_grantComp', [a1, 100], {from: a1})
-    ).rejects.toRevert('revert only admin can grant comp');
-    });
+        it('should award comp if called by admin', async () => {
+            const tx = await send(rewardsDistributor, '_grantComp', [a1, 100]);
+            expect(tx).toHaveLog('CompGranted', {
+                recipient: a1,
+                amount: 100
+            });
+        });
 
-    it('should revert if insufficient comp', async () => {
-    await expect(
-        send(comptroller, '_grantComp', [a1, etherUnsigned(1e20)])
-    ).rejects.toRevert('revert insufficient comp for grant');
+        it('should revert if not called by admin', async () => {
+            await expect(
+                send(rewardsDistributor, '_grantComp', [a1, 100], {from: a1})
+            ).rejects.toRevert('revert only admin can grant comp');
+        });
+
+        it('should revert if insufficient comp', async () => {
+            await expect(
+                send(rewardsDistributor, '_grantComp', [a1, etherUnsigned(1e20)])
+            ).rejects.toRevert('revert insufficient comp for grant');
+        });
     });
-});
 
 describe('getCompMarkets()', () => {
     it('should return the comp markets', async () => {
@@ -525,7 +481,7 @@ describe('distributeSupplierComp()', () => {
     });
 
 });
-
+/*
 describe('transferComp', () => {
     it('should transfer comp accrued when amount is above threshold', async () => {
     const compRemaining = 1000, a1AccruedPre = 100, threshold = 1;
@@ -771,7 +727,7 @@ describe('harnessRefreshCompSpeeds', () => {
     expect(borrowSpeed3).toEqualNumber(compRate.dividedBy(4).multipliedBy(3));
     });
 });
-
+*/
 describe('harnessSetCompSpeeds', () => {
     it('should correctly set differing COMP supply and borrow speeds', async () => {
     const desiredCompSupplySpeed = 3;
@@ -886,7 +842,7 @@ describe('harnessSetCompSpeeds', () => {
     await checkAccrualsBorrowAndSupply(/* supply speed */ 0, /* borrow speed */ etherExp(0.5));
     });
 });
-
+/*
 describe('harnessAddCompMarkets', () => {
     it('should correctly add a comp market if called by admin', async () => {
     const cBAT = await makeCToken({comptroller, supportMarket: true});
@@ -954,7 +910,8 @@ describe('updateContributorRewards', () => {
     expect(a1Accrued2).toEqualNumber(50 * 2000);
     });
 });
-
+*/
+/*
 describe('_setContributorCompSpeed', () => {
     it('should revert if not called by admin', async () => {
     await expect(
@@ -981,5 +938,5 @@ describe('_setContributorCompSpeed', () => {
     const a1Accrued = await compAccrued(comptroller, a1);
     expect(a1Accrued).toEqualNumber(50 * 2000);
     });
-    });
+    });*/
 });
