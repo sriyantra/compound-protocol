@@ -101,7 +101,9 @@ contract RewardsDistributorDelegateHarness is RewardsDistributorDelegate {
         blockNumber = number;
     }
 
-    function harnessRefreshCompSpeeds() public {
+    function harnessRefreshCompSpeeds(address comptrollerAddr) public {
+        Comptroller comptroller = Comptroller(comptrollerAddr);
+        PriceOracle oracle = comptroller.oracle();
         CToken[] memory allMarkets_ = allMarkets;
 
         for (uint i = 0; i < allMarkets_.length; i++) {
@@ -116,10 +118,10 @@ contract RewardsDistributorDelegateHarness is RewardsDistributorDelegate {
         for (uint i = 0; i < allMarkets_.length; i++) {
             CToken cToken = allMarkets_[i];
             if (compSupplySpeeds[address(cToken)] > 0 || compBorrowSpeeds[address(cToken)] > 0) {
-                //Exp memory assetPrice = Exp({mantissa: oracle.getUnderlyingPrice(cToken)});
-                //Exp memory utility = mul_(assetPrice, cToken.totalBorrows());
-                //utilities[i] = utility;
-                //totalUtility = add_(totalUtility, utility);
+                Exp memory assetPrice = Exp({mantissa: oracle.getUnderlyingPrice(cToken)});
+                Exp memory utility = mul_(assetPrice, cToken.totalBorrows());
+                utilities[i] = utility;
+                totalUtility = add_(totalUtility, utility);
             }
         }
 
