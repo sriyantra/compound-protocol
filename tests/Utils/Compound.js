@@ -25,20 +25,25 @@ async function makeFuseFeeDistributor(opts = {}) {
 }
 
 async function makeRewardsDistributor(opts = {}) {
+  let distributor;
   const {
     root = saddle.account,
+    admin = root,
     rewardToken
   } = opts || {};
 
   let rewardsDistributorDelegatee, rewardsDistributorDelegator;
-  rewardsDistributorDelegatee = await deploy('RewardsDistributorDelegate');
+  rewardsDistributorDelegatee = await deploy('RewardsDistributorDelegateHarness');
   rewardsDistributorDelegator = await deploy('RewardsDistributorDelegator', 
     [
-      root,
+      admin,
       opts.rewardToken._address,
       rewardsDistributorDelegatee._address,
     ]);
-  return await saddle.getContractAt('RewardsDistributorDelegate', rewardsDistributorDelegator._address);
+  //const comp = opts.comp || await deploy('Comp', [opts.compOwner || root]);
+  const comp = opts.rewardToken || await deploy('Comp', [opts.compOwner || root]);
+  distributor = await saddle.getContractAt('RewardsDistributorDelegateHarness', rewardsDistributorDelegator._address);
+  return Object.assign(distributor, { comp });
 }
 
 async function makeComptroller(opts = {}) {

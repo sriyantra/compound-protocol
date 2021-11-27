@@ -6,6 +6,7 @@ import "../../contracts/PriceOracle.sol";
 contract ComptrollerHarness is Comptroller {
     address compAddress;
     uint public blockNumber;
+
     constructor() Comptroller() public {}
 
     function setPauseGuardian(address harnessedPauseGuardian) public {
@@ -24,15 +25,23 @@ contract ComptrollerHarness is Comptroller {
         return compAddress;
     }
 
+    function harnessFastForward(uint blocks) public returns (uint) {
+        blockNumber += blocks;
+        return blockNumber;
+    }
+
     function getBlockNumber() public view returns (uint) {
         return blockNumber;
+    }
+
+    function setBlockNumber(uint number) public {
+        blockNumber = number;
     }
 
     function getCompMarkets() public view returns (address[] memory) {
         uint m = allMarkets.length;
         uint n = 0;
 
-        //for (uint256 i = 0; i < rewardsDistributors.length; i++) RewardsDistributorDelegate(rewardsDistributors[i]).flywheelPreSupplierAction(cToken, supplier);
         RewardsDistributorDelegate rdd = RewardsDistributorDelegate(rewardsDistributors[0]);
 
         for (uint i = 0; i < m; i++) {
@@ -48,6 +57,7 @@ contract ComptrollerHarness is Comptroller {
                 compMarkets[k++] = address(allMarkets[i]);
             }
         }
+        return compMarkets;
     }
 }
 
