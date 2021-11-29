@@ -67,6 +67,10 @@ contract CErc20DelegateHarness is CErc20Delegate {
         blockNumber += blocks;
     }
 
+    function harnessIncrementTotalBorrows(uint addtlBorrow_) public {
+        totalBorrows = totalBorrows + addtlBorrow_;
+    }
+
     function harnessSetBalance(address account, uint amount) external {
         accountTokens[account] = amount;
     }

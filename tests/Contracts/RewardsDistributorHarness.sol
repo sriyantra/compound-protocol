@@ -10,6 +10,7 @@ contract RewardsDistributorDelegateHarness is RewardsDistributorDelegate {
     uint public blockNumber;
     CToken[] cTokensArr;
     uint[] speedsArr;
+    uint compRate;
 
     function setPauseGuardian(address harnessedPauseGuardian) public {
         //pauseGuardian = harnessedPauseGuardian;
@@ -42,7 +43,7 @@ contract RewardsDistributorDelegateHarness is RewardsDistributorDelegate {
      * @param compRate_ The amount of COMP wei per block to distribute
      */
     function harnessSetCompRate(uint compRate_) public {
-        //compRate = compRate_;
+        compRate = compRate_;
     }
 
     function setCompBorrowerIndex(address cToken, address borrower, uint index) public {
@@ -72,9 +73,16 @@ contract RewardsDistributorDelegateHarness is RewardsDistributorDelegate {
         for (uint i = 0; i < cTokens.length; i++) {
             // temporarily set compSpeed to 1 (will be fixed by `harnessRefreshCompSpeeds`)
             cTokensArr.push(CToken(cTokens[i]));
+            speedsArr.push(1);
         }
-        speedsArr.push(1);
         _setCompSpeeds(cTokensArr, speedsArr, speedsArr);
+    }
+
+    function harnessTransferComp(address user, uint userAccrued, uint threshold) public returns (uint) {
+        if (userAccrued > 0 && userAccrued >= threshold) {
+            return grantCompInternal(user, userAccrued);
+        }
+        return userAccrued;
     }
 
     function harnessDistributeBorrowerComp(address cToken, address borrower, uint marketBorrowIndexMantissa) public {
@@ -128,7 +136,9 @@ contract RewardsDistributorDelegateHarness is RewardsDistributorDelegate {
         for (uint i = 0; i < allMarkets_.length; i++) {
             CToken cToken = allMarkets[i];
             //uint newSpeed = totalUtility.mantissa > 0 ? mul_(compRate, div_(utilities[i], totalUtility)) : 0;
-            //setCompSpeedInternal(cToken, newSpeed, newSpeed);
+            uint newSpeed = totalUtility.mantissa > 0 ? div_(utilities[i].mantissa, totalUtility) : 0;
+            setCompSupplySpeedInternal(cToken, newSpeed);
+            setCompBorrowSpeedInternal(cToken, newSpeed);
         }
     }
 }
