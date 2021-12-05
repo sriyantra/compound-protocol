@@ -225,6 +225,16 @@ async function makeInterestRateModel(opts = {}) {
     const kink = etherMantissa(dfn(opts.kink, 0));
     return await deploy('JumpRateModel', [baseRate, multiplier, jump, kink]);
   }
+
+  if (kind == 'reactive-jump-rate') {
+    let comptroller = await makeComptroller();
+    let cToken = await makeCToken({comptroller, supportMarket: true, underlyingPrice: 1});
+    const baseRate = etherMantissa(dfn(opts.baseRate, 0));
+    const multiplier = etherMantissa(dfn(opts.multiplier, 1e-18));
+    const jump = etherMantissa(dfn(opts.jump, 20));
+    const kink = etherMantissa(dfn(opts.kink, 80));
+    return await deploy('ReactiveJumpRateModelV2', [baseRate, multiplier, jump, kink, root, cToken._address]);
+  }
 }
 
 async function makePriceOracle(opts = {}) {

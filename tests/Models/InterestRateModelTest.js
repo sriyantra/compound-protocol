@@ -67,13 +67,16 @@ describe('InterestRateModel', () => {
     'baseP025-slopeP20': { base: 0.025, slope: 0.20, model: 'white-paper' },
     'baseP05-slopeP45': { base: 0.05, slope: 0.45, model: 'white-paper' },
     'white-paper': { base: 0.1, slope: 0.45, model: 'white-paper' },
-    'jump-rate': { base: 0.1, slope: 0.45, model: 'jump-rate' }
+    'jump-rate': { base: 0.1, slope: 0.45, model: 'jump-rate' },
+    'reactive-jump-rate': { base: 0.1, slope: 0.45, model: 'reactive-jump-rate' }
   };
 
   Object.entries(expectedRates).forEach(async ([kind, info]) => {
     let model;
     beforeAll(async () => {
+      console.log('before'); 
       model = await makeInterestRateModel({ kind: info.model, baseRate: info.base, multiplier: info.slope });
+      console.log('after'); 
     });
 
     describe(kind, () => {
@@ -125,9 +128,24 @@ describe('InterestRateModel', () => {
           await expect(getBorrowRate(badModel, 0, 1, 0)).rejects.toRevert("revert SafeMath: multiplication overflow");
         });
       }
+
+      if (kind == 'reactive-jump-rate') {
+        console.log('reactive-jump-rate');
+        it('should revert if not called by cToken', async () => {
+          const cToken = await call(model, 'cToken');
+          console.log(cToken);
+          console.log('after ctoken');
+          await expect(call(model, 'resetInterestCheckpoints')).rejects.toRevert("revert");
+        });
+
+        it('handles overflow utilization rate times slope + base', async () => {
+          //const badModel = await makeInterestRateModel({ kind, baseRate: -1, multiplier: 1e48, jump: 1e48 });
+          //await expect(getBorrowRate(badModel, 0, 1, 0)).rejects.toRevert("revert SafeMath: multiplication overflow");
+        });
+      }
     });
 
-    describe('jump rate tests', () => {
+    /*describe('jump rate tests', () => {
       describe('chosen points', () => {
         const tests = [
           {
@@ -214,6 +232,6 @@ describe('InterestRateModel', () => {
           });
         });
       });
-    });
+    });*/
   });
 });

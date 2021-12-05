@@ -143,7 +143,6 @@ describe('_setCompSpeeds()', () => {
     const cBAT = await makeCToken({ comptroller, supportMarket: false });
     await expect(
         send(distributor, 'harnessAddCompMarkets', [[cBAT._address]])
-        //send(distributor, '_setCompSpeeds', [[cBAT._address], ['1'], ['1']])
     ).rejects.toRevert('revert comp market is not listed');
 
     const markets = await call(comptroller, 'getCompMarkets');
@@ -435,7 +434,7 @@ describe('distributeSupplierComp()', () => {
 
         await send(mkt, "harnessSetBalance", [a1, etherUnsigned(5e18)]);
         await send(distributor, "setCompSupplyState", [mkt._address, etherDouble(6), 10]);
-        await send(distributor, "setCompSupplierIndex", [mkt._address, a1, etherDouble(2)])
+        await send(distributor, "setCompSupplierIndex", [mkt._address, a1, etherDouble(2)]);
         /*
             supplierAmount  = 5e18
             deltaIndex      = marketStoredIndex - userStoredIndex
