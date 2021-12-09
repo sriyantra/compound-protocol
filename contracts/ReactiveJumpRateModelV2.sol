@@ -24,7 +24,7 @@ contract ReactiveJumpRateModelV2 is InterestRateModel, BaseJumpRateModelV2 {
     /**
      * @notice Number of interest checkpoints
      */
-    uint internal interestCheckpointCount;
+    uint public interestCheckpointCount;
 
     /**
      * @notice Struct for interest checkpoints
@@ -38,7 +38,7 @@ contract ReactiveJumpRateModelV2 is InterestRateModel, BaseJumpRateModelV2 {
     /**
      * @notice Array of interest checkpoints
      */
-    InterestCheckpoint[] internal interestCheckpoints;
+    InterestCheckpoint[INTEREST_CHECKPOINT_BUFFER] internal interestCheckpoints;
 
     /**
      * @notice Calculates the current borrow rate per block

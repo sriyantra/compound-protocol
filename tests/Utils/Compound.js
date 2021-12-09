@@ -40,7 +40,6 @@ async function makeRewardsDistributor(opts = {}) {
       opts.rewardToken._address,
       rewardsDistributorDelegatee._address,
     ]);
-  //const comp = opts.comp || await deploy('Comp', [opts.compOwner || root]);
   const comp = opts.rewardToken || await deploy('Comp', [opts.compOwner || root]);
   distributor = await saddle.getContractAt('RewardsDistributorDelegateHarness', rewardsDistributorDelegator._address);
   return Object.assign(distributor, { comp });
@@ -227,13 +226,15 @@ async function makeInterestRateModel(opts = {}) {
   }
 
   if (kind == 'reactive-jump-rate') {
-    let comptroller = await makeComptroller();
-    let cToken = await makeCToken({comptroller, supportMarket: true, underlyingPrice: 1});
+    //let comptroller = await makeComptroller();
+    let cToken = opts.cToken || await makeCToken();
     const baseRate = etherMantissa(dfn(opts.baseRate, 0));
     const multiplier = etherMantissa(dfn(opts.multiplier, 1e-18));
     const jump = etherMantissa(dfn(opts.jump, 20));
     const kink = etherMantissa(dfn(opts.kink, 80));
-    return await deploy('ReactiveJumpRateModelV2', [baseRate, multiplier, jump, kink, root, cToken._address]);
+    let model = await deploy('ReactiveJumpRateModelV2', [baseRate, multiplier, jump, kink, root, cToken._address]);
+    await send(cToken, 'harnessSetInterestRateModel', [model._address]);
+    return Object.assign(model, { cToken });
   }
 }
 
