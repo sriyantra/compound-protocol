@@ -27,28 +27,23 @@ contract CErc20PluginDelegate is CErc20Delegate {
      * @param data The encoded arguments for becoming
      */
     function _becomeImplementation(bytes calldata data) external {
-        require(msg.sender == address(this) || hasAdminRights(), "admin");
+        require(msg.sender == address(this) || hasAdminRights());
 
-        (address _plugin, address _rewardsDistributor) = abi.decode(
+        (address _plugin) = abi.decode(
             data,
-            (address, address)
+            (address)
         );
 
         IPlugin oldPlugin = plugin;
         plugin = IPlugin(_plugin);
+
         if (address(oldPlugin) != address(0) && address(oldPlugin) != _plugin) {
-            oldPlugin.transferPlugin(_plugin);
+            oldPlugin.withdraw(address(this), oldPlugin.balanceOfUnderlying(address(this)));
         }
 
-        // Approve rewards distributor to pull reward token
-        if (_rewardsDistributor != address(0)) {
-            EIP20Interface(plugin.rewardToken()).approve(address(_rewardsDistributor), uint256(-1));
-        }
-
-        uint256 balance = EIP20Interface(underlying).balanceOf(address(this));
-        if (balance != 0) {
-            EIP20Interface(underlying).transfer(_plugin, balance);
-        }
+        EIP20Interface(underlying).approve(_plugin, uint256(-1));
+        
+        plugin.deposit(address(this), EIP20Interface(underlying).balanceOf(address(this)));
     }
 
     /*** CToken Overrides ***/
@@ -60,11 +55,11 @@ contract CErc20PluginDelegate is CErc20Delegate {
      * @return The quantity of underlying tokens owned by this contract
      */
     function getCashPrior() internal view returns (uint256) {
-        return plugin.getCash();
+        return plugin.balanceOfUnderlying(address(this));
     }
 
     /**
-     * @notice Transfer the underlying to the plugin and trigger a deposit
+     * @notice Transfer the underlying to the cToken and trigger a deposit
      * @param from Address to transfer funds from
      * @param amount Amount of underlying to transfer
      * @return The actual amount that is transferred
@@ -74,9 +69,9 @@ contract CErc20PluginDelegate is CErc20Delegate {
         uint256 amount
     ) internal returns (uint256) {
         // Perform the EIP-20 transfer in
-        require(EIP20Interface(underlying).transferFrom(from, address(plugin), amount), "send fail");
+        require(EIP20Interface(underlying).transferFrom(from, address(this), amount), "send fail");
 
-        plugin.deposit(amount);
+        plugin.deposit(address(this), amount);
         return amount;
     }
 

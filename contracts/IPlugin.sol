@@ -6,19 +6,17 @@ interface IPlugin {
     // Views
     function rewardToken() external view returns(address);
 
-    /// @notice amount of underlying token deposited
-    function getCash() external view returns(uint256);
+    function balanceOfUnderlying(address _owner) external view returns (uint256);
+
+    function underlying() external view returns (address);
 
     // Mutative Functions
 
-    /// @notice deposit underlying in plugin
-    function deposit(uint256 lusdAmount) external;
-
-    /// @notice withdraw underlying from plugin
-    function withdraw(address payable to, uint256 lusdAmount) external;
-
     /// @notice claim reward token
-    function claim() external;
+    function claim(address to) external;
 
-    function transferPlugin(address newPlugin) external;
+    function deposit(address _to, uint256 _value) external returns (uint256 _shares);
+
+    /// @notice withdraw underlying from vault
+    function withdraw(address _to, uint256 _value) external returns (uint256 _shares);
 }

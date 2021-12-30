@@ -60,7 +60,7 @@ contract PluginRewardsDistributorDelegate is RewardsDistributorDelegateStorageV1
      * @dev pulls COMP from CToken, requires ERC-20 approval within token
      */
     function updateCompSupplyIndex(address cToken) internal {
-        ICErc20Plugin(cToken).plugin().claim();
+        ICErc20Plugin(cToken).plugin().claim(cToken);
         CompMarketState storage supplyState = compSupplyState[cToken];
         EIP20NonStandardInterface comp = EIP20NonStandardInterface(rewardToken);
         uint compAccrued_ = comp.balanceOf(cToken);
