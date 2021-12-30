@@ -7,7 +7,7 @@ import "./RewardsDistributorStorage.sol";
 import "./IPlugin.sol";
 
 interface ICErc20Plugin {
-    function plugin() external returns(IPlugin);
+    function plugin() external returns(IRewardsPlugin);
 }
 
 /**
