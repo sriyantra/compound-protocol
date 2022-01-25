@@ -34,17 +34,16 @@ contract CErc20PluginDelegate is CErc20Delegate {
             (address)
         );
 
-        IERC4626 oldPlugin = plugin;
-        plugin = IERC4626(_plugin);
-
-        if (address(oldPlugin) != address(0) && address(oldPlugin) != _plugin) {
-            oldPlugin.withdraw(address(this), address(this), oldPlugin.balanceOfUnderlying(address(this)));
+        if (address(plugin) != address(0)) {
+            plugin.redeem(address(this), address(this), plugin.balanceOf(address(this)));
         }
 
+        plugin = IERC4626(_plugin);
+
         uint256 amount = EIP20Interface(underlying).balanceOf(address(this));
-        EIP20Interface(underlying).approve(_plugin, amount);
-        
-        plugin.deposit(address(this), amount);
+        if (amount != 0) {
+            doTransferIn(address(this), amount);
+        }
     }
 
     /*** CToken Overrides ***/
