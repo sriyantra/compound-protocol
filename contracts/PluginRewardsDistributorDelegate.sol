@@ -4,10 +4,9 @@ import "./CToken.sol";
 import "./ExponentialNoError.sol";
 import "./Comptroller.sol";
 import "./RewardsDistributorStorage.sol";
-import "./IPlugin.sol";
 
 interface ICErc20Plugin {
-    function plugin() external returns(IRewardsPlugin);
+    function claim() external;
 }
 
 /**
@@ -60,7 +59,7 @@ contract PluginRewardsDistributorDelegate is RewardsDistributorDelegateStorageV1
      * @dev pulls COMP from CToken, requires ERC-20 approval within token
      */
     function updateCompSupplyIndex(address cToken) internal {
-        ICErc20Plugin(cToken).plugin().claim(cToken);
+        ICErc20Plugin(cToken).claim();
         CompMarketState storage supplyState = compSupplyState[cToken];
         EIP20NonStandardInterface comp = EIP20NonStandardInterface(rewardToken);
         uint compAccrued_ = comp.balanceOf(cToken);

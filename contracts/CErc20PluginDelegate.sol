@@ -3,7 +3,7 @@ pragma experimental ABIEncoderV2;
 
 import "./CErc20Delegate.sol";
 import "./EIP20Interface.sol";
-import "./IPlugin.sol";
+import "./IERC4626.sol";
 
 /**
  * @title Rari's CErc20Plugin's Contract
@@ -18,7 +18,7 @@ contract CErc20PluginDelegate is CErc20Delegate {
     /**
      * @notice Plugin address
      */
-    IPlugin public plugin;
+    IERC4626 public plugin;
 
     uint256 constant public PRECISION = 1e18;
     
@@ -34,16 +34,17 @@ contract CErc20PluginDelegate is CErc20Delegate {
             (address)
         );
 
-        IPlugin oldPlugin = plugin;
-        plugin = IPlugin(_plugin);
+        IERC4626 oldPlugin = plugin;
+        plugin = IERC4626(_plugin);
 
         if (address(oldPlugin) != address(0) && address(oldPlugin) != _plugin) {
-            oldPlugin.withdraw(address(this), oldPlugin.balanceOfUnderlying(address(this)));
+            oldPlugin.withdraw(address(this), address(this), oldPlugin.balanceOfUnderlying(address(this)));
         }
 
-        EIP20Interface(underlying).approve(_plugin, uint256(-1));
+        uint256 amount = EIP20Interface(underlying).balanceOf(address(this));
+        EIP20Interface(underlying).approve(_plugin, amount);
         
-        plugin.deposit(address(this), EIP20Interface(underlying).balanceOf(address(this)));
+        plugin.deposit(address(this), amount);
     }
 
     /*** CToken Overrides ***/
@@ -71,6 +72,8 @@ contract CErc20PluginDelegate is CErc20Delegate {
         // Perform the EIP-20 transfer in
         require(EIP20Interface(underlying).transferFrom(from, address(this), amount), "send fail");
 
+        EIP20Interface(underlying).approve(address(plugin), amount);
+
         plugin.deposit(address(this), amount);
         return amount;
     }
@@ -84,6 +87,6 @@ contract CErc20PluginDelegate is CErc20Delegate {
         address payable to,
         uint256 amount
     ) internal {
-        plugin.withdraw(to, amount);
+        plugin.withdraw(address(this), to, amount);
     }
 }
