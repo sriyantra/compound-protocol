@@ -16,29 +16,10 @@ async function main() {
   // Deploy CErc20PluginDelegate
   const CErc20PluginDelegate = await hre.ethers.getContractFactory("CErc20PluginDelegate");
 
-  const cLusdDelegate = await CErc20PluginDelegate.deploy();
-  await cLusdDelegate.deployed();
-
-  console.log("CErc20PluginDelegate:", cLusdDelegate.address);
-
-  // Deploy PluginRewardsDistributorDelegate + Delegator
-  const PluginRewardsDistributorDelegate = await hre.ethers.getContractFactory("PluginRewardsDistributorDelegate");
-
-  const pluginDelegate = await PluginRewardsDistributorDelegate.deploy();
+  const pluginDelegate = await CErc20PluginDelegate.deploy();
   await pluginDelegate.deployed();
-  
+
   console.log("pluginDelegate:", pluginDelegate.address);
-
-  const PluginRewardsDistributorDelegator = await hre.ethers.getContractFactory("RewardsDistributorDelegator");
-
-  const pluginDelegator = await PluginRewardsDistributorDelegator.deploy(
-    "0xa731585ab05fC9f83555cf9Bff8F58ee94e18F85", // rari fuse admin
-    "0x6DEA81C8171D0bA574754EF6F8b412F2Ed88c54D", // LQTY
-    pluginDelegate.address
-  );
-  await pluginDelegator.deployed();
-  
-  console.log("pluginDelegator:", pluginDelegator.address);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
