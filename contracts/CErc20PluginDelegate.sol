@@ -3,7 +3,7 @@ pragma experimental ABIEncoderV2;
 
 import "./CErc20Delegate.sol";
 import "./EIP20Interface.sol";
-import "./IERC4626.sol";
+import "./IERC4626Draft.sol";
 
 /**
  * @title Rari's CErc20Plugin's Contract
@@ -18,7 +18,7 @@ contract CErc20PluginDelegate is CErc20Delegate {
     /**
      * @notice Plugin address
      */
-    IERC4626 public plugin;
+    IERC4626Draft public plugin;
 
     uint256 constant public PRECISION = 1e18;
     
@@ -37,10 +37,12 @@ contract CErc20PluginDelegate is CErc20Delegate {
         require(_plugin != address(0), "0 addr");
 
         if (address(plugin) != address(0)) {
-            plugin.redeem(address(this), address(this), plugin.balanceOf(address(this)));
+            plugin.redeem(plugin.balanceOf(address(this)), address(this), address(this));
         }
 
-        plugin = IERC4626(_plugin);
+        plugin = IERC4626Draft(_plugin);
+
+        EIP20Interface(underlying).approve(_plugin, uint256(-1));
 
         uint256 amount = EIP20Interface(underlying).balanceOf(address(this));
         if (amount != 0) {
@@ -57,7 +59,7 @@ contract CErc20PluginDelegate is CErc20Delegate {
      * @return The quantity of underlying tokens owned by this contract
      */
     function getCashPrior() internal view returns (uint256) {
-        return plugin.balanceOfUnderlying(address(this));
+        return plugin.assetsOf(address(this));
     }
 
     /**
@@ -78,9 +80,7 @@ contract CErc20PluginDelegate is CErc20Delegate {
     }
 
     function deposit(uint256 amount) internal {
-        EIP20Interface(underlying).approve(address(plugin), amount);
-
-        plugin.deposit(address(this), amount);
+        plugin.deposit(amount, address(this));
     }
 
     /**
@@ -92,6 +92,6 @@ contract CErc20PluginDelegate is CErc20Delegate {
         address payable to,
         uint256 amount
     ) internal {
-        plugin.withdraw(address(this), to, amount);
+        plugin.withdraw(amount, to, address(this));
     }
 }

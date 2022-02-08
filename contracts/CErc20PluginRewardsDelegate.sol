@@ -17,7 +17,7 @@ contract CErc20PluginRewardsDelegate is CErc20PluginDelegate {
         );
 
         require(address(plugin) == address(0), "plugin");
-        plugin = IERC4626(_plugin);
+        plugin = IERC4626Draft(_plugin);
 
         EIP20Interface(_rewardToken).approve(_rewardsDistributor, uint256(-1));
     }
