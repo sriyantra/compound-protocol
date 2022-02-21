@@ -36,7 +36,7 @@ contract CErc20PluginDelegate is CErc20Delegate {
 
         require(_plugin != address(0), "0 addr");
 
-        if (address(plugin) != address(0) && plugin.previewRedeem(plugin.balanceOf(address(this))) != 0) {
+        if (address(plugin) != address(0) && plugin.balanceOf(address(this)) != 0) {
             plugin.redeem(plugin.balanceOf(address(this)), address(this), address(this));
         }
 
