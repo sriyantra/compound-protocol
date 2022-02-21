@@ -34,7 +34,7 @@ contract CErc20PluginDelegate is CErc20Delegate {
             (address)
         );
 
-        require(_plugin != address(0), "0 addr");
+        require(_plugin != address(0), "0");
 
         if (address(plugin) != address(0) && plugin.balanceOf(address(this)) != 0) {
             plugin.redeem(plugin.balanceOf(address(this)), address(this), address(this));
@@ -73,7 +73,7 @@ contract CErc20PluginDelegate is CErc20Delegate {
         uint256 amount
     ) internal returns (uint256) {
         // Perform the EIP-20 transfer in
-        require(EIP20Interface(underlying).transferFrom(from, address(this), amount), "send fail");
+        require(EIP20Interface(underlying).transferFrom(from, address(this), amount), "send");
 
         deposit(amount);
         return amount;
