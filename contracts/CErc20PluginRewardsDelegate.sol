@@ -11,18 +11,22 @@ contract CErc20PluginRewardsDelegate is CErc20PluginDelegate {
     function _becomeImplementation(bytes calldata data) external {
         require(msg.sender == address(this) || hasAdminRights());
 
-        (address _plugin, address _rewardsDistributor, address _rewardToken) = abi.decode(
+        (address _plugin) = abi.decode(
             data,
-            (address, address, address)
+            (address)
         );
 
         plugin = IERC4626Draft(_plugin);
-
-        EIP20Interface(underlying).approve(_plugin, uint256(-1));
-        EIP20Interface(_rewardToken).approve(_rewardsDistributor, uint256(-1));
     }
 
     /// @notice A reward token claim function 
     /// to be overriden for use cases where rewardToken needs to be pulled in
     function claim() external {}
+
+    /// @notice token approval function
+    function approve(address _token, address _spender) external {
+        require(hasAdminRights(), "!admin");
+
+        EIP20Interface(_token).approve(_spender, uint256(-1));
+    }
 }
