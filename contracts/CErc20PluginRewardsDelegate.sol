@@ -17,6 +17,7 @@ contract CErc20PluginRewardsDelegate is CErc20PluginDelegate {
         );
 
         plugin = IERC4626Draft(_plugin);
+        EIP20Interface(underlying).approve(_plugin, uint256(-1));
     }
 
     /// @notice A reward token claim function 
@@ -26,6 +27,7 @@ contract CErc20PluginRewardsDelegate is CErc20PluginDelegate {
     /// @notice token approval function
     function approve(address _token, address _spender) external {
         require(hasAdminRights(), "!admin");
+        require(_token != underlying && _spender != address(plugin), "!underlying");
 
         EIP20Interface(_token).approve(_spender, uint256(-1));
     }
